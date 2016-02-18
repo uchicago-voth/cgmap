@@ -8,6 +8,29 @@ from mdtraj.geometry import distance, compute_center_of_mass
 
 mapping_options = {}
 
+def map_forces(traj,atom_indices=None,use_pbc=True):
+    """Compute the center of mass for each frame.
+    Parameters
+    ----------
+    traj : Trajectory
+        Trajectory to sum forces on
+    atom_indices : array-like, dtype=int, shape=(n_atoms)
+            List of indices of atoms to use in computing com
+    Returns
+    -------
+    forces : np.ndarray, shape=(n_frames, 3)
+         Summed up forces on atom indices
+    """
+
+    if atom_indices is not None and len(atom_indices)>0:
+        forces = traj.forces[:,atom_indices,:]
+    else:
+        forces = traj.forces
+
+    mapped_forces = forces.sum(axis=1)
+
+    return mapped_forces
+
 def map_molecules(trj,selection_list,bead_label_list,*args,**kwargs):
     """ This performs the mapping assuming the entire system is a set of identical molecules"""
     index_list = []
@@ -30,15 +53,15 @@ def map_molecules(trj,selection_list,bead_label_list,*args,**kwargs):
     for r in trj.top.residues:
         for bead_idx, internal_indices in enumerate(internal_indices_list):
             system_indices = internal_indices + start_index
-            start_index = start_index + r.n_atoms
             index_list.append(system_indices) 
             resSeq_list.append(resSeq)
             label_list.append(bead_label_list[bead_idx])
         resSeq = resSeq+1
+        start_index = start_index + r.n_atoms
 
     return cg_by_index(trj, index_list, label_list, *args, **kwargs)
 
-def compute_com(traj,atom_indices=None):
+def compute_com(traj,atom_indices=None,use_pbc=True):
     """Compute the center of mass for each frame.
     Parameters
     ----------
@@ -59,11 +82,18 @@ def compute_com(traj,atom_indices=None):
         xyz = traj.xyz
         masses = np.array([a.mass for a in traj.top.atoms])
 
+
     com = np.zeros((traj.n_frames, 3))
     masses /= masses.sum()
 
     for i, x in enumerate(xyz):
+# use periodic boundaries by centering relative to first xyz coordinate, then shift back
+        if use_pbc is True:
+            xyz0 = x[0,:]
+            shift = traj[i].unitcell_lengths*np.floor( (x - xyz0)/traj[i].unitcell_lengths ) 
+            x = x - shift
         com[i, :] = x.astype('float64').T.dot(masses).flatten()
+        
     return com
 mapping_options['com'] = compute_com
 mapping_options['center_of_mass'] = compute_com
@@ -151,6 +181,7 @@ def cg_by_index(trj, atom_indices_list, bead_label_list, chain_list=None, segmen
 
     n_beads = len(atom_indices_list)
     xyz = np.zeros((trj.xyz.shape[0],n_beads,trj.xyz.shape[2]),dtype=trj.xyz.dtype,order='C')
+    forces = np.zeros((trj.xyz.shape[0],n_beads,trj.xyz.shape[2]),dtype=np.double,order='C')
     columns = ["serial","name","element","resSeq","resName","chainID"]
     masses = np.array([  np.sum([a.mass for a in trj.top.atoms if a.index in atom_indices]) for atom_indices in atom_indices_list],dtype=np.float64)
     charges = np.array([  np.sum([a.charge for a in trj.top.atoms if a.index in atom_indices]) for atom_indices in atom_indices_list],dtype=np.float64)
@@ -160,7 +191,10 @@ def cg_by_index(trj, atom_indices_list, bead_label_list, chain_list=None, segmen
         atom_indices = atom_indices_list[i]
         bead_label = bead_label_list[i]
         xyz_i = map_coords(trj,atom_indices)
+        forces_i = map_forces(trj,atom_indices)
+
         xyz[:,i,:] = xyz_i
+        forces[:,i,:] = forces_i
 
         if resSeq_list is not None:
             resSeq = resSeq_list[i]
@@ -192,6 +226,8 @@ def cg_by_index(trj, atom_indices_list, bead_label_list, chain_list=None, segmen
         unitcell_angles = trj._unitcell_angles.copy()
     time = trj._time.copy()
 
-    return Trajectory(xyz=xyz, topology=topology, time=time,
+    new_trj = Trajectory(xyz=xyz, topology=topology, time=time,
                       unitcell_lengths=unitcell_lengths,
                       unitcell_angles=unitcell_angles)
+    new_trj.forces = forces
+    return new_trj
