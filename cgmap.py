@@ -61,6 +61,38 @@ def map_molecules(trj,selection_list,bead_label_list,*args,**kwargs):
 
     return cg_by_index(trj, index_list, label_list, *args, **kwargs)
 
+def compute_center(traj,atom_indices=None,use_pbc=True):
+    """Compute the center of mass for each frame.
+    Parameters
+    ----------
+    traj : Trajectory
+        Trajectory to compute center of mass for
+    atom_indices : array-like, dtype=int, shape=(n_atoms)
+            List of indices of atoms to use in computing center
+    Returns
+    -------
+    center : np.ndarray, shape=(n_frames, 3)
+         Coordinates of the mean position of atom_indices for each frame
+    """
+
+    if atom_indices is not None and len(atom_indices)>0:
+        xyz = traj.xyz[:,atom_indices,:]
+    else:
+        xyz = traj.xyz
+
+    center = np.zeros((traj.n_frames, 3))
+
+    for i, x in enumerate(xyz):
+# use periodic boundaries by centering relative to first xyz coordinate, then shift back
+        if use_pbc is True:
+            xyz0 = x[0,:]
+            shift = traj[i].unitcell_lengths*np.floor( (x - xyz0)/traj[i].unitcell_lengths + 0.5) 
+            x = x - shift
+        center[i, :] = x.astype('float64').mean(axis=0)
+        
+    return center
+mapping_options['center'] = compute_center
+
 def compute_com(traj,atom_indices=None,use_pbc=True):
     """Compute the center of mass for each frame.
     Parameters
