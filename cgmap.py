@@ -90,7 +90,7 @@ def compute_com(traj,atom_indices=None,use_pbc=True):
 # use periodic boundaries by centering relative to first xyz coordinate, then shift back
         if use_pbc is True:
             xyz0 = x[0,:]
-            shift = traj[i].unitcell_lengths*np.floor( (x - xyz0)/traj[i].unitcell_lengths ) 
+            shift = traj[i].unitcell_lengths*np.floor( (x - xyz0)/traj[i].unitcell_lengths + 0.5) 
             x = x - shift
         com[i, :] = x.astype('float64').T.dot(masses).flatten()
         
