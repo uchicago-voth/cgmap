@@ -219,6 +219,8 @@ def cg_by_index(trj, atom_indices_list, bead_label_list, chain_list=None, segmen
     charges = np.array([  np.sum([a.charge for a in trj.top.atoms if a.index in atom_indices]) for atom_indices in atom_indices_list],dtype=np.float64)
 
     topology_labels = []
+    element_label_dict = {}
+
     for i in range(n_beads):
         atom_indices = atom_indices_list[i]
         bead_label = bead_label_list[i]
@@ -232,11 +234,18 @@ def cg_by_index(trj, atom_indices_list, bead_label_list, chain_list=None, segmen
             resSeq = resSeq_list[i]
         else:
             resSeq = i + 1 
-        element_label='%4s'%('B%i'%(resSeq))
+
+        #element_label='%4s'%('B%i'%(resSeq))
+        if not bead_label in element_label_dict:
+            element_label='%4s'%('B%i'%(len(element_label_dict)))
+            element_label_dict[bead_label] = element_label
+        else:
+            element_label = element_label_dict[bead_label]
+
         if element_label.strip().upper() not in element.Element._elements_by_symbol:
             element.Element(1000+resSeq, element_label, element_label, masses[i], 1.0)
 
-        topology_labels.append( [i,element_label,element_label,resSeq,'%3s'%bead_label,chain_list[i]] )
+        topology_labels.append( [i,bead_label,element_label,resSeq,'%3s'%bead_label,chain_list[i]] )
 
     df = pd.DataFrame(topology_labels,columns=columns)
     topology = Topology.from_dataframe(df,bonds=bonds)
