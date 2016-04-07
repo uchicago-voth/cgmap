@@ -31,7 +31,64 @@ def map_forces(traj,atom_indices=None,use_pbc=True):
 
     return mapped_forces
 
-def map_molecules(trj,selection_list,bead_label_list,*args,**kwargs):
+def map_molecules(trj,selection_list,bead_label_list,molecule_types=None,*args,**kwargs):
+    """ This performs the mapping where each molecule has been assigned a type"""
+    index_list = []
+    resSeq_list = []
+    label_list = []
+
+    n_molecule_types = len(selection_list)
+    if molecule_types is None:
+        molecule_types = [0 for idx in range(trj.top.n_residues)]
+
+    if not sorted(set(molecule_types))==range(n_molecule_types):
+        raise ValueError("Error in map molecules, molecule types list must contain only and all numbers from 0 to n_molecule_types-1")
+    if len(molecule_types) != trj.top.n_residues:
+        raise ValueError("Error in map molecules, molecule types list must have the same length as number of residues")
+
+    # get the first molecule with molecule type i
+    first_molecules = [molecule_types.index(i) for i in range(n_molecule_types)]
+
+    if len(selection_list) != len(bead_label_list):
+        raise ValueError("Error in map molecules, must submit selection list and bead label list of same length")
+    for i in range(n_molecule_types):
+        if len(selection_list[i]) != len(bead_label_list[i]):
+            raise ValueError("Error in map molecules, selection list %i and bead label list %i must be of same length"%(i,i))
+
+    first_indices = []
+    internal_indices_list = [] 
+    for i in range(n_molecule_types):
+        internal_indices_list.append([])
+        first_index = trj.top.select("(resSeq == %i)"%(first_molecules[i]+1)).min()
+        for sel in selection_list[i]:
+            if sel.find("index")>-1 and sel.find("name")>-1:
+                raise ValueError("Error in map molecules, do not specify selection by index and by type")
+            elif sel.find("index")>-1:
+                # use atom selection language to parse selection string containing only indices on whole system, then offset later
+                internal_indices = trj.top.select("%s"%(sel))
+            elif sel.find("name")>-1:
+                # have to un-shift list because this will be added to current id later
+                internal_indices = trj.top.select("(resSeq == %i) and (%s)"%(first_molecules[i]+1,sel)) - first_index
+
+            if len(internal_indices)==0:
+                raise ValueError("Error in map_molecules, selection string '%s' produced an empty list of atom indices"%sel)
+            internal_indices_list[i].append(internal_indices)
+
+    start_index = 0
+    resSeq = 1
+    for r in trj.top.residues:
+        molecule_type = molecule_types[resSeq-1]
+        for bead_idx, internal_indices in enumerate(internal_indices_list[molecule_type]):
+            system_indices = internal_indices + start_index
+            index_list.append(system_indices) 
+            resSeq_list.append(resSeq)
+            label_list.append(bead_label_list[i][bead_idx])
+        resSeq = resSeq+1
+        start_index = start_index + r.n_atoms
+
+    return cg_by_index(trj, index_list, label_list, *args, **kwargs)
+
+def map_identical_molecules(trj,selection_list,bead_label_list,*args,**kwargs):
     """ This performs the mapping assuming the entire system is a set of identical molecules"""
     index_list = []
     resSeq_list = []
@@ -40,12 +97,12 @@ def map_molecules(trj,selection_list,bead_label_list,*args,**kwargs):
     internal_indices_list = [] 
 
     if len(selection_list) != len(bead_label_list):
-        raise ValueError("Error in map molecules, must submit selection list and bead label list of same length")
+        raise ValueError("Error in map_identical_molecules, must submit selection list and bead label list of same length")
 
     for sel in selection_list:
         internal_indices = trj.top.select("(resSeq == 1) and (%s)"%sel)
         if len(internal_indices)==0:
-            raise ValueError("Error in map_molecules, selection string '%s' produced an empty list of atom indices"%sel)
+            raise ValueError("Error in map_identical_molecules, selection string '%s' produced an empty list of atom indices"%sel)
         internal_indices_list.append(internal_indices)
 
     start_index = 0
@@ -225,10 +282,11 @@ def cg_by_index(trj, atom_indices_list, bead_label_list, chain_list=None, segmen
         atom_indices = atom_indices_list[i]
         bead_label = bead_label_list[i]
         xyz_i = map_coords(trj,atom_indices)
-        forces_i = map_forces(trj,atom_indices)
-
         xyz[:,i,:] = xyz_i
-        forces[:,i,:] = forces_i
+
+        if "forces" in trj.__dict__ and len(trj.forces)>0:
+            forces_i = map_forces(trj,atom_indices)
+            forces[:,i,:] = forces_i
 
         if resSeq_list is not None:
             resSeq = resSeq_list[i]
