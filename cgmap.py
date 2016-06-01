@@ -4,7 +4,7 @@ import pandas as pd
 from mdtraj import Trajectory
 from mdtraj import Topology
 from mdtraj import element
-from mdtraj.geometry import distance, compute_center_of_mass
+from mdtraj.geometry import distance
 
 mapping_options = {}
 
@@ -59,7 +59,7 @@ def map_molecules(trj,selection_list,bead_label_list,molecule_types=None,*args,*
     internal_indices_list = [] 
     for i in range(n_molecule_types):
         internal_indices_list.append([])
-        first_index = trj.top.select("(resSeq == %i)"%(first_molecules[i]+1)).min()
+        first_index = trj.top.select("(resid == %i)"%(first_molecules[i])).min()
         for sel in selection_list[i]:
             if sel.find("index")>-1 and sel.find("name")>-1:
                 raise ValueError("Error in map molecules, do not specify selection by index and by type")
@@ -68,7 +68,7 @@ def map_molecules(trj,selection_list,bead_label_list,molecule_types=None,*args,*
                 internal_indices = trj.top.select("%s"%(sel))
             elif sel.find("name")>-1:
                 # have to un-shift list because this will be added to current id later
-                internal_indices = trj.top.select("(resSeq == %i) and (%s)"%(first_molecules[i]+1,sel)) - first_index
+                internal_indices = trj.top.select("(resid == %i) and (%s)"%(first_molecules[i],sel)) - first_index
 
             if len(internal_indices)==0:
                 raise ValueError("Error in map_molecules, selection string '%s' produced an empty list of atom indices"%sel)
