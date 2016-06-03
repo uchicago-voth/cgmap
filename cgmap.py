@@ -184,8 +184,40 @@ def compute_com(traj,atom_indices=None,use_pbc=True):
         com[i, :] = x.astype('float64').T.dot(masses).flatten()
         
     return com
-mapping_options['com'] = compute_com
-mapping_options['center_of_mass'] = compute_com
+mapping_options['com_slow'] = compute_com
+mapping_options['center_of_mass_slow'] = compute_com
+
+def compute_com_fast(xyz_i,xyz_all,atom_indices,masses,unitcell_lengths=None):
+    """Compute the center of mass for each frame.
+    Parameters
+    ----------
+    traj : Trajectory
+        Trajectory to compute center of mass for
+    atom_indices : array-like, dtype=int, shape=(n_atoms)
+            List of indices of atoms to use in computing com
+    Returns
+    -------
+    com : np.ndarray, shape=(n_frames, 3)
+         Coordinates of the center of mass for each frame
+    """
+
+    #com = xyz_i
+    masses /= masses.sum()
+    xyz = xyz_all[:,atom_indices,:]
+
+
+    for i, x in enumerate(xyz):
+# use periodic boundaries by centering relative to first xyz coordinate, then shift back
+        if unitcell_lengths is not None:
+            xyz0 = x[0,:]
+            shift = unitcell_lengths[i]*np.floor( (x - xyz0)/unitcell_lengths[i] + 0.5) 
+            x = x - shift
+        xyz_i[i] = x.astype('float64').T.dot(masses).flatten()
+        
+    return
+#    return com
+mapping_options['com'] = compute_com_fast
+mapping_options['center_of_mass'] = compute_com_fast
 
 def cg_by_selection(trj, selection_string_list, *args, **kwargs):
     """Create a coarse grained (CG) trajectory from list of atom selections by 
@@ -278,10 +310,17 @@ def cg_by_index(trj, atom_indices_list, bead_label_list, chain_list=None, segmen
     topology_labels = []
     element_label_dict = {}
 
+    xyz_i = np.zeros((trj.xyz.shape[0],trj.xyz.shape[2]),dtype=trj.xyz.dtype,order='C')
+
     for i in range(n_beads):
         atom_indices = atom_indices_list[i]
         bead_label = bead_label_list[i]
-        xyz_i = map_coords(trj,atom_indices)
+        #xyz_i = map_coords(trj,atom_indices)
+
+        masses_i = np.array([a.mass for a in trj.top.atoms if a.index in atom_indices_list[i]],dtype=np.float64)
+
+        map_coords(xyz_i,trj.xyz,atom_indices,masses_i,unitcell_lengths=trj.unitcell_lengths)
+
         xyz[:,i,:] = xyz_i
 
         if "forces" in trj.__dict__ and len(trj.forces)>0:
