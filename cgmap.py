@@ -82,9 +82,10 @@ def map_molecules(trj,selection_list,bead_label_list,molecule_types=None,*args,*
             system_indices = internal_indices + start_index
             index_list.append(system_indices) 
             resSeq_list.append(resSeq)
-            label_list.append(bead_label_list[i][bead_idx])
+            label_list.append(bead_label_list[molecule_type][bead_idx])
         resSeq = resSeq+1
         start_index = start_index + r.n_atoms
+    sys.exit()
 
     return cg_by_index(trj, index_list, label_list, *args, **kwargs)
 
