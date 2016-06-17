@@ -31,8 +31,11 @@ def map_forces(traj,atom_indices=None,use_pbc=True):
 
     return mapped_forces
 
-def map_molecules(trj,selection_list,bead_label_list,molecule_types=None,*args,**kwargs):
-    """ This performs the mapping where each molecule has been assigned a type"""
+def map_molecules(trj,selection_list,bead_label_list,molecule_types=None,molecule_type_order=False,*args,**kwargs):
+    """ This performs the mapping where each molecule has been assigned a type. 
+
+        Specifying molecule_type_order means that the map will be reordered so that all molecules of type 0 come first, then 1, etc
+    """
     index_list = []
     resSeq_list = []
     label_list = []
@@ -75,9 +78,16 @@ def map_molecules(trj,selection_list,bead_label_list,molecule_types=None,*args,*
             internal_indices_list[i].append(internal_indices)
 
     start_index = 0
+
+    # get list of type [ (0,r0), (1,r1) etc ]
+    if molecule_type_order is True:
+        residue_list = sorted( enumerate(trj.top.residues),key=lambda x: molecule_types[x[0]])
+    else:
+        residue_list = enumerate(trj.top.residues)
+
     resSeq = 1
-    for r in trj.top.residues:
-        molecule_type = molecule_types[resSeq-1]
+    for ridx,r in residue_list:
+        molecule_type = molecule_types[ridx]
         for bead_idx, internal_indices in enumerate(internal_indices_list[molecule_type]):
             system_indices = internal_indices + start_index
             index_list.append(system_indices) 
