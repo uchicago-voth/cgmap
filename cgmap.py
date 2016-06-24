@@ -344,7 +344,7 @@ def cg_by_index(trj, atom_indices_list, bead_label_list, chain_list=None, segmen
 
         #element_label='%4s'%('B%i'%(resSeq))
         if not bead_label in element_label_dict:
-            element_label='%4s'%('B%i'%(len(element_label_dict)))
+            element_label='%2s'%('B%i'%(len(element_label_dict)%10))
             element_label_dict[bead_label] = element_label
         else:
             element_label = element_label_dict[bead_label]
