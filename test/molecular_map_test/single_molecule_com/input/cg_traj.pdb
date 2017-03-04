@@ -1,7 +1,0 @@
-REMARK   1 CREATED WITH MDTraj 1.8.0, 2017-03-03
-CRYST1   98.321   98.451   89.856  90.00  90.00  90.00 P 1           1 
-MODEL        0
-ATOM      1 C1    C1 A   1      34.725 -45.860  30.290  1.00  0.00          B0  
-TER       2       C1 A   1
-ENDMDL
-END
