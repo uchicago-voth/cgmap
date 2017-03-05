@@ -14,7 +14,7 @@ function run_reg_test {
 	return $result
 }
 
-result = 0
+result=0
 
 for test_dir in ./test/molecular_map_test/*; do
 	run_reg_test $test_dir
