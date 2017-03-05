@@ -19,7 +19,9 @@ result=0
 for test_dir in ./test/molecular_map_test/*; do
 	run_reg_test $test_dir
 	status_val=$?
+	echo "status_val val" $status_val
 	result=$((result + status_val))
+	echo "result val "$result
 done
 
 exit $result
