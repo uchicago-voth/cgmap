@@ -15,9 +15,10 @@ def md_content_equality(traj_1,traj_2,prefix="Traj equality: ",xyz_tol=1e-16):
 
         print(prefix+"First sqdiff coordinate frame: {}".format(\
                 (traj_1.xyz[:,:,1]-traj_2.xyz[:,:,1])**2))
-        j
+
         violations=np.nonzero((traj_1.xyz-traj_2.xyz)**2 > xyz_tol)
-        print(prefix+"Indices violating residual ({}): {}".format(xyz_tol,violations)
+        print(prefix+"Indices violating residual ({}): {}".format(\
+                xyz_tol,violations))
 
         if (residual > xyz_tol):
             result=False
