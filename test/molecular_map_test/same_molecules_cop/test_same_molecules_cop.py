@@ -109,6 +109,9 @@ ref_cg_traj = cg_trj.load(reference_dir + reference_traj,
                           top=reference_dir + reference_top) 
 
 result_null   = check.md_content_equality(cg_traj_null_mass,ref_cg_traj)
+if (not(result_null)):
+    print("ERROR: Trajectories do not numerically match. XYZ residual:")
+    print(((cg_traj_null_mass.xyz-ref_cg_traj.xyz)**2).sum()))
 #result_native = check.md_content_equality(cg_traj_null_mass,ref_cg_traj)
 
 #sys.exit(check.check_result_to_exitval(result_null & result_native))
