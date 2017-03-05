@@ -1,3 +1,6 @@
+## CGMap: a simple tool to linearly map molecular trajectories stepwise.
+[![Linux Build Status](https://travis-ci.org/alekepd/cgmap.svg?branch=master)](https://travis-ci.org/alekepd/cgmap)
+
 CGMap provides a tool to map fine-graine (FG) molecular dynamics trajectories
 to coarse-grained (CG) trajectories. The map between FG and CG trajectories are
 constrainted to be linear, with weights defined as either corresponding to
