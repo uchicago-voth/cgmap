@@ -1,3 +1,5 @@
+import numpy as np
+
 def md_content_equality(traj_1,traj_2,prefix="Traj equality: ",xyz_tol=1e-16):
 
     result=True
