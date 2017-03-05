@@ -1,11 +1,9 @@
 #versions we want to test against
 language: python
         - "2.7"
+before_install:
+        - sudo apt-get -qq update
+        - sudo apt-get install -y python-numpy cython python-pandas
 install: 
-        - sudo pip install conda
-        - sudo conda init
-        - sudo conda update conda --yes
-        - deps='pip numpy pandas mdtraj'
-        - conda create -p $HOME/py --yes $deps "python=$TRAVIS_PYTHON_VERSION"
-        - export PATH=$HOME/py/bin:$PATH
+        - pip install mdtraj
 script: ./test/reg_test
