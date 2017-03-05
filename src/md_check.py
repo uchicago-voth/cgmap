@@ -13,7 +13,9 @@ def md_content_equality(traj_1,traj_2,prefix="Traj equality: ",xyz_tol=1e-16):
         print(prefix+"Warning: Coordinates don't match bit for bit.")
 
         residual=((traj_1.xyz-traj_2.xyz)**2).mean()
-        print(prefix+"Warning: Coordinate residual: {}".format(residual))
+        max_residual=((traj_1.xyz-traj_2.xyz)**2).max()
+        print(prefix+"Warning: Mean coordinate residual: {}".format(residual))
+        print(prefix+"Warning: Max coordinate residual: {}".format(residual))
 
         print(prefix+"First sqdiff coordinate frame: {}".format(\
                 (traj_1.xyz[:,:,1]-traj_2.xyz[:,:,1])**2))
