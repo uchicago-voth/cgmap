@@ -1,4 +1,4 @@
-def md_content_equality(traj_1,traj_2,prefix="Traj equality: "):
+def md_content_equality(traj_1,traj_2,prefix="Traj equality: ",xyz_tol=1e-16):
 
     result=True
 
@@ -6,13 +6,21 @@ def md_content_equality(traj_1,traj_2,prefix="Traj equality: "):
         print(prefix+"Topologies don't match.")
         result=False
 
+
     if (not((traj_1.xyz == traj_2.xyz).all())):
-        print(prefix+"Coordinates don't match.")
+        print(prefix+"Warning: Coordinates don't match bit for bit.")
+
         residual=((traj_1.xyz-traj_2.xyz)**2).mean()
-        print(prefix+"Coordinate residual: {}".format(residual))
+        print(prefix+"Warning: Coordinate residual: {}".format(residual))
+
         print(prefix+"First sqdiff coordinate frame: {}".format(\
                 (traj_1.xyz[:,:,1]-traj_2.xyz[:,:,1])**2))
-        result=False
+        j
+        violations=np.nonzero((traj_1.xyz-traj_2.xyz)**2 > xyz_tol)
+        print(prefix+"Indices violating residual ({}): {}".format(xyz_tol,violations)
+
+        if (residual > xyz_tol):
+            result=False
 
     if (not(traj_1.n_atoms == traj_2.n_atoms)):
         print(prefix+"Number of atoms doesn't match.")
