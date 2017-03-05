@@ -1,6 +1,6 @@
 import numpy as np
 
-def md_content_equality(traj_1,traj_2,prefix="Traj equality: ",xyz_tol=1e-16):
+def md_content_equality(traj_1,traj_2,prefix="Traj equality: ",xyz_tol=1e-15):
 
     result=True
 
@@ -15,7 +15,7 @@ def md_content_equality(traj_1,traj_2,prefix="Traj equality: ",xyz_tol=1e-16):
         residual=((traj_1.xyz-traj_2.xyz)**2).mean()
         max_residual=((traj_1.xyz-traj_2.xyz)**2).max()
         print(prefix+"Warning: Mean coordinate residual: {}".format(residual))
-        print(prefix+"Warning: Max coordinate residual: {}".format(residual))
+        print(prefix+"Warning: Max coordinate residual: {}".format(max_residual))
 
         print(prefix+"First sqdiff coordinate frame: {}".format(\
                 (traj_1.xyz[:,:,1]-traj_2.xyz[:,:,1])**2))
