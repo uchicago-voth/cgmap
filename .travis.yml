@@ -1,5 +1,11 @@
 #versions we want to test against
 language: python
         - "2.7"
-install: "pip install -r requirements.txt"
+install: 
+        - sudo pip install conda
+        - sudo conda init
+        - sudo conda update conda --yes
+        - deps='pip numpy pandas mdtraj'
+        - conda create -p $HOME/py --yes $deps "python=$TRAVIS_PYTHON_VERSION"
+        - export PATH=$HOME/py/bin:$PATH
 script: ./test/reg_test
