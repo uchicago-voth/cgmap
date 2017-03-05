@@ -10,6 +10,8 @@ def md_content_equality(traj_1,traj_2,prefix="Traj equality: "):
         print(prefix+"Coordinates don't match.")
         residual=((traj_1.xyz-traj_2.xyz)**2).mean()
         print(prefix+"Coordinate residual: {}".format(residual))
+        print(prefix+"First sqdiff coordinate frame\
+                (traj_1.xyz(:,:,1)-traj_2.xyz(:,:,1))**2".format(residual))
         result=False
 
     if (not(traj_1.n_atoms == traj_2.n_atoms)):
