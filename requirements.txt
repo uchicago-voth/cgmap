@@ -1,3 +1,4 @@
-mdtraj
-pandas
+cython
 numpy
+pandas
+mdtraj
