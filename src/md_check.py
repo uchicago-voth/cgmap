@@ -33,7 +33,7 @@ def md_content_equality(traj_1,traj_2,prefix="Traj equality: ",xyz_abs_tol=1e-8)
         violations = np.nonzero((traj_1.xyz-traj_2.xyz) > xyz_abs_tol)
 
         print(prefix+"Indices violating residual ({}): {}".format(\
-                xyz_rel_tol,violations))
+                xyz_abs_tol,violations))
 
         if (residual > xyz_abs_tol):
             result=False
