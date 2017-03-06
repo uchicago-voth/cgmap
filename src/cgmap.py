@@ -419,8 +419,17 @@ def cg_by_index(trj, atom_indices_list, bead_label_list, chain_list=None, segmen
                       order='C')
     columns = ["serial","name","element","resSeq","resName","chainID"]
 
-    masses = np.array([  np.sum([a.mass for a in trj.top.atoms if a.index in atom_indices]) for atom_indices in atom_indices_list],dtype=np.float64)
-    charges = np.array([  np.sum([a.charge for a in trj.top.atoms if a.index in atom_indices]) for atom_indices in atom_indices_list],dtype=np.float64)
+    masses = np.zeros((n_beads),dtype=np.float64)
+    masses_i = []
+    charges = np.zeros((n_beads), dtype=np.float64)
+    for ii in range(n_beads):
+        atom_indices = atom_indices_list[ii]
+        temp = np.array([])
+        for jj in atom_indices:
+            temp = np.append(temp, trj.top.atom(jj).mass)
+            charges[ii] += trj.topology.atom(jj).charge
+        masses_i.append(temp)
+        masses[ii] = masses_i[ii].sum()
 
     topology_labels = []
     element_label_dict = {}
@@ -434,12 +443,10 @@ def cg_by_index(trj, atom_indices_list, bead_label_list, chain_list=None, segmen
         bead_label = bead_label_list[i]
         #xyz_i = map_coords(trj,atom_indices)
 
-        masses_i = np.array([a.mass for a in trj.top.atoms if a.index in atom_indices_list[i]],dtype=np.float64)
-
         map_coords(xyz_i,
                    trj.xyz,
                    atom_indices,
-                   masses_i,
+                   masses_i[i],
                    unitcell_lengths=trj.unitcell_lengths)
 
         xyz[:,i,:] = xyz_i
