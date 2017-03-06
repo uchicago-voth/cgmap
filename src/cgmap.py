@@ -60,27 +60,27 @@ def map_molecules(trj,selection_list,bead_label_list,molecule_types=None,
 
     n_molecule_types = len(selection_list)
 
-    if not sorted(set(molecule_types))==range(n_molecule_types):
-        raise ValueError("Error in map molecules, molecule types list must " 
+    if sorted(set(molecule_types)) != range(n_molecule_types):
+        raise ValueError("Error in map molecules, molecule types list must "
                          "contain only and all numbers from 0 to "
-                         "n_molecule_types-1")
+                         "n_molecule_types-1.")
 
     if len(molecule_types) != trj.top.n_residues:
         raise ValueError("Error in map molecules, molecule types list must "
-                         "have the same length as number of residues")
+                         "have the same length as number of residues.")
 
     if len(selection_list) != len(bead_label_list):
         raise ValueError("Error in map molecules, must submit selection list "
-                         "and bead label list of same length")
+                         "and bead label list of same length.")
 
     for i in range(n_molecule_types):
         if len(selection_list[i]) != len(bead_label_list[i]):
             raise ValueError("Error in map molecules, selection list %i and "
-                             "bead label list %i must be of same length"%(i,i))
+                             "bead label list %i must be of same length."%(i,i))
 
     ### generate the indices local to each molecule for mapping
 
-    # get the first molecule with molecule type i
+    # get the first molecule index for each molecule type
     first_molecules = [molecule_types.index(i) for i in range(n_molecule_types)]
 
     first_indices = []
@@ -96,8 +96,7 @@ def map_molecules(trj,selection_list,bead_label_list,molecule_types=None,
 
             if has_index and has_name:
                 raise ValueError("Error in map molecules, do not specify "
-                                 "selection by index and by type")
-
+                                 "selection by index and by type.")
             elif has_index:
                 # use atom selection language to parse selection 
                 #string containing only indices on whole system, then offset later
