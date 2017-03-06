@@ -83,14 +83,13 @@ def map_molecules(trj,selection_list,bead_label_list,molecule_types=None,
     # get the first molecule index for each molecule type
     first_molecules = [molecule_types.index(i) for i in range(n_molecule_types)]
 
-    first_indices = []
-    internal_indices_list = []
+    internal_indices_list = [[] for i in range(n_molecule_types)]
 
-    for i in range(n_molecule_types):
-        internal_indices_list.append([])
-        first_index = trj.top.select("(resid == %i)"%(first_molecules[i])).min()
-        for sel in selection_list[i]:
+    iterable = zip(selection_list,first_molecules,internal_indices_list)
+    for selection,first_mol,mol_indices in iterable:
+        first_index = trj.top.select("(resid == %i)"%(first_mol)).min()
 
+        for sel in selection:
             has_index = sel.find("index")> -1
             has_name  = sel.find("name") > -1
 
@@ -104,13 +103,14 @@ def map_molecules(trj,selection_list,bead_label_list,molecule_types=None,
 
             elif has_name:
                 # have to un-shift list because this will be added to current id later
-                filter_string = "(resid == %i) and (%s)"%(first_molecules[i],sel)
+                filter_string = "(resid == %i) and (%s)"%(first_mol,sel)
                 internal_indices = trj.top.select(filter_string) - first_index
 
             if len(internal_indices)==0:
                 raise ValueError("Error in map_molecules, selection string '%s'"
                                  "produced an empty list of atom indices"%sel)
-            internal_indices_list[i].append(internal_indices)
+            mol_indices.append(internal_indices)
+
 
     # get list of type [ (0,r0), (1,r1) etc ]
     if molecule_type_order is True:
