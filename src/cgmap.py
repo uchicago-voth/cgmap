@@ -33,20 +33,23 @@ def map_forces(traj,atom_indices=None,use_pbc=True):
 
 def map_molecules(trj,selection_list,bead_label_list,molecule_types=None,
                   molecule_type_order=False,*args,**kwargs):
-    """ This performs the mapping where each molecule has been assigned a 
-    type. 
-        
+    """ This performs the mapping where each molecule has been assigned a
+    type.
+
     Parameters
     ----------
     traj : Trajectory
         Trajectory to sum forces on
-    selection_list : indexible collection of strings
-    bead_label_list : indexible collection
-    molecule_types : indexible collection of integers
+    selection_list :
+        Indexible collection of strings
+    bead_label_list :
+        Indexible collection
+    molecule_types :
+        Indexible collection of integers
     molecule_type_order : boolean
-        Specifying molecule_type_order means that the map will be 
+        Specifying molecule_type_order means that the map will be
         reordered so that all molecules of type 0 come first, then 1, etc.
-   
+
     -------
     traj: trajectory
         trajectory formed by applying given molecular map.
@@ -97,7 +100,7 @@ def map_molecules(trj,selection_list,bead_label_list,molecule_types=None,
                 raise ValueError("Error in map molecules, do not specify "
                                  "selection by index and by type.")
             elif has_index:
-                # use atom selection language to parse selection 
+                # use atom selection language to parse selection
                 #string containing only indices on whole system, then offset later
                 internal_indices = trj.top.select("%s"%(sel))
 
@@ -129,7 +132,7 @@ def map_molecules(trj,selection_list,bead_label_list,molecule_types=None,
         molecule_type = molecule_types[ridx]
         for bead_idx, internal_indices in enumerate(internal_indices_list[molecule_type]):
             system_indices = internal_indices + start_index
-            index_list.append(system_indices) 
+            index_list.append(system_indices)
             resSeq_list.append(resSeq)
             label_list.append(bead_label_list[molecule_type][bead_idx])
         resSeq = resSeq+1
@@ -138,13 +141,13 @@ def map_molecules(trj,selection_list,bead_label_list,molecule_types=None,
     return cg_by_index(trj, index_list, label_list, *args, **kwargs)
 
 def map_identical_molecules(trj,selection_list,bead_label_list,*args,**kwargs):
-    """ This performs the mapping assuming the entire system 
+    """ This performs the mapping assuming the entire system
     is a set of identical molecules"""
     index_list = []
     resSeq_list = []
     label_list = []
 
-    internal_indices_list = [] 
+    internal_indices_list = []
 
     if len(selection_list) != len(bead_label_list):
         raise ValueError("Error in map_identical_molecules, must submit "
@@ -163,7 +166,7 @@ def map_identical_molecules(trj,selection_list,bead_label_list,*args,**kwargs):
     for r in trj.top.residues:
         for bead_idx, internal_indices in enumerate(internal_indices_list):
             system_indices = internal_indices + start_index
-            index_list.append(system_indices) 
+            index_list.append(system_indices)
             resSeq_list.append(resSeq)
             label_list.append(bead_label_list[bead_idx])
         resSeq = resSeq+1
@@ -196,10 +199,10 @@ def compute_center(traj,atom_indices=None,use_pbc=True):
 # use periodic boundaries by centering relative to first xyz coordinate, then shift back
         if use_pbc is True:
             xyz0 = x[0,:]
-            shift = traj[i].unitcell_lengths*np.floor( (x - xyz0)/traj[i].unitcell_lengths + 0.5) 
+            shift = traj[i].unitcell_lengths*np.floor( (x - xyz0)/traj[i].unitcell_lengths + 0.5)
             x = x - shift
         center[i, :] = x.astype('float64').mean(axis=0)
-        
+
     return center
 mapping_options['center'] = compute_center
 
@@ -228,15 +231,15 @@ def compute_com(traj,atom_indices=None,use_pbc=True):
     masses /= masses.sum()
 
     for i, x in enumerate(xyz):
-    # use periodic boundaries by centering relative to 
+    # use periodic boundaries by centering relative to
     #first xyz coordinate, then shift back
         if use_pbc is True:
             xyz0 = x[0,:]
             shift = traj[i].unitcell_lengths*np.floor( \
-                    (x - xyz0)/traj[i].unitcell_lengths + 0.5) 
+                    (x - xyz0)/traj[i].unitcell_lengths + 0.5)
             x = x - shift
         com[i, :] = x.astype('float64').T.dot(masses).flatten()
-        
+
     return com
 mapping_options['com_slow'] = compute_com
 mapping_options['center_of_mass_slow'] = compute_com
@@ -261,48 +264,48 @@ def compute_com_fast(xyz_i,xyz_all,atom_indices,masses,unitcell_lengths=None):
 
 
     for i, x in enumerate(xyz):
-    # use periodic boundaries by centering relative to first 
+    # use periodic boundaries by centering relative to first
     # xyz coordinate, then shift back
         if unitcell_lengths is not None:
             xyz0 = x[0,:]
             shift = unitcell_lengths[i]*np.floor( \
-                    (x - xyz0)/unitcell_lengths[i] + 0.5) 
+                    (x - xyz0)/unitcell_lengths[i] + 0.5)
             x = x - shift
         xyz_i[i] = x.astype('float64').T.dot(masses).flatten()
-        
+
     return
 #    return com
 mapping_options['com'] = compute_com_fast
 mapping_options['center_of_mass'] = compute_com_fast
 
 def cg_by_selection(trj, selection_string_list, *args, **kwargs):
-    """Create a coarse grained (CG) trajectory from list of 
-    atom selections by computing centers of mass of selected 
+    """Create a coarse grained (CG) trajectory from list of
+    atom selections by computing centers of mass of selected
     sets of atoms.
 
     Parameters
     ----------
-    selection_string_list : 
-        list of strings in mdtraj selection 
+    selection_string_list :
+        list of strings in mdtraj selection
         language, shape=(n_beads,)
-    bead_label_list : 
-        list of maximum 4-letter strings to 
+    bead_label_list :
+        list of maximum 4-letter strings to
         label CG sites
-    chain_list : 
-        optional list of chain id's to split resulting 
+    chain_list :
+        optional list of chain id's to split resulting
         beads into separate chains
-    resSeq_list :     
-        optional list of residue sequence id's to 
+    resSeq_list :
+        optional list of residue sequence id's to
         assign cg residues
-    segment_id_list : 
-        optional list of segment id's to assign 
+    segment_id_list :
+        optional list of segment id's to assign
         cg residues
     inplace : bool, default=False
         If ``True``, the operation is done inplace, modifying ``trj``.
         Otherwise, a copy is returned with the sliced atoms, and
         ``trj`` is not modified.
     bonds : array-like,dtype=int, shape=(n_bonds,2), default=None
-        If specified, sets these bonds in new topology 
+        If specified, sets these bonds in new topology
     Returns
     -------
     traj : md.Trajectory
@@ -317,38 +320,38 @@ def cg_by_selection(trj, selection_string_list, *args, **kwargs):
             print("Warning - selection string returns 0 atoms: '%s'"%sel_string)
     return cg_by_index(trj, atom_indices_list, *args, **kwargs )
 
-def cg_by_index(trj, atom_indices_list, bead_label_list, chain_list=None, segment_id_list=None, 
+def cg_by_index(trj, atom_indices_list, bead_label_list, chain_list=None, segment_id_list=None,
                 resSeq_list=None, inplace=False, bonds=None, mapping_function="com"):
-    """Create a coarse grained (CG) trajectory from subsets of atoms by 
+    """Create a coarse grained (CG) trajectory from subsets of atoms by
         computing centers of mass of selected sets of atoms.
     Parameters
     ----------
-    atom_indices_list : 
+    atom_indices_list :
         list of array-like, dtype=int, shape=(n_beads,n_atoms)
         List of indices of atoms to combine into CG sites
-    bead_label_list : 
+    bead_label_list :
         list of maximum 4-letter strings to label CG sites
-    chain_list : 
-        optional list of chain id's to split resulting beads into separate 
+    chain_list :
+        optional list of chain id's to split resulting beads into separate
         chains
-    resSeq_list : 
+    resSeq_list :
         optional list of residue sequence id's to assign cg residues
-    segment_id_list : 
+    segment_id_list :
         optional list of segment id's to assign cg residues
-    inplace : 
+    inplace :
         bool, default=False
         If ``True``, the operation is done inplace, modifying ``trj``.
         Otherwise, a copy is returned with the sliced atoms, and
         ``trj`` is not modified.
     bonds : array-like,dtype=int, shape=(n_bonds,2), default=None
-        If specified, sets these bonds in new topology 
+        If specified, sets these bonds in new topology
     mapping_function: string, default='com': how to map xyz coordinates
         options: %s
 
-    Note - If repeated resSeq values are used, as for a repeated motiff 
-        in a CG polymer, those sections most be broken into separate 
+    Note - If repeated resSeq values are used, as for a repeated motiff
+        in a CG polymer, those sections most be broken into separate
         chains or an incorrect topology will result
- 
+
     Returns
     -------
     traj : md.Trajectory
@@ -428,7 +431,7 @@ def cg_by_index(trj, atom_indices_list, bead_label_list, chain_list=None, segmen
         if resSeq_list is not None:
             resSeq = resSeq_list[i]
         else:
-            resSeq = i + 1 
+            resSeq = i + 1
 
         #element_label='%4s'%('B%i'%(resSeq))
         if not bead_label in element_label_dict:
@@ -438,10 +441,10 @@ def cg_by_index(trj, atom_indices_list, bead_label_list, chain_list=None, segmen
             element_label = element_label_dict[bead_label]
 
         if element_label.strip().upper() not in element.Element._elements_by_symbol:
-            element.Element(1000+resSeq, 
-                            element_label, 
-                            element_label, 
-                            masses[i], 
+            element.Element(1000+resSeq,
+                            element_label,
+                            element_label,
+                            masses[i],
                             1.0)
 
         topology_labels.append( [i,
@@ -453,11 +456,11 @@ def cg_by_index(trj, atom_indices_list, bead_label_list, chain_list=None, segmen
 
     df = pd.DataFrame(topology_labels,columns=columns)
     topology = Topology.from_dataframe(df,bonds=bonds)
-    
+
     if segment_id_list is not None:
         for beadidx,bead in enumerate(topology.atoms):
             bead.residue.segment_id = segment_id_list[beadidx]
-        
+
     if inplace:
         if trj._topology is not None:
             trj._topology = topology
