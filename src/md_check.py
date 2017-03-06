@@ -1,6 +1,6 @@
 import numpy as np
 
-def md_content_equality(traj_1,traj_2,prefix="Traj equality: ",xyz_tol=1e-15):
+def md_content_equality(traj_1,traj_2,prefix="Traj equality: ",xyz_abs_tol=1e-8):
 
     result=True
 
@@ -12,19 +12,30 @@ def md_content_equality(traj_1,traj_2,prefix="Traj equality: ",xyz_tol=1e-15):
     if (not((traj_1.xyz == traj_2.xyz).all())):
         print(prefix+"Warning: Coordinates don't match bit for bit.")
 
-        residual=((traj_1.xyz-traj_2.xyz)**2).mean()
-        max_residual=((traj_1.xyz-traj_2.xyz)**2).max()
+        sqdiff_mat = (traj_1.xyz-traj_2.xyz)**2
+        min_mat    = np.minimum(abs(traj_1.xyz),abs(traj_2.xyz))
+
+        residual       = sqdiff_mat.mean()**0.5
+        max_residual   = sqdiff_mat.max()**0.5
         print(prefix+"Warning: Mean coordinate residual: {}".format(residual))
         print(prefix+"Warning: Max coordinate residual: {}".format(max_residual))
+
+        rel_residual_mat = sqdiff_mat**0.5/min_mat
+
+        residual         = rel_residual_mat.mean()
+        max_residual     = rel_residual_mat.max()
+        print(prefix+"Warning: Mean relative coordinate residual: {}".format(residual))
+        print(prefix+"Warning: Max relative coordinate residual: {}".format(max_residual))
 
         print(prefix+"First sqdiff coordinate frame: {}".format(\
                 (traj_1.xyz[:,:,1]-traj_2.xyz[:,:,1])**2))
 
-        violations=np.nonzero((traj_1.xyz-traj_2.xyz)**2 > xyz_tol)
+        violations = np.nonzero((traj_1.xyz-traj_2.xyz)**2 > xyz_tol)
+
         print(prefix+"Indices violating residual ({}): {}".format(\
                 xyz_tol,violations))
 
-        if (residual > xyz_tol):
+        if (residual > xyz_abs_tol):
             result=False
 
     if (not(traj_1.n_atoms == traj_2.n_atoms)):
