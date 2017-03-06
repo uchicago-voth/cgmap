@@ -112,8 +112,6 @@ def map_molecules(trj,selection_list,bead_label_list,molecule_types=None,
                                  "produced an empty list of atom indices"%sel)
             internal_indices_list[i].append(internal_indices)
 
-    start_index = 0
-
     # get list of type [ (0,r0), (1,r1) etc ]
     if molecule_type_order is True:
         residue_list = sorted( enumerate(trj.top.residues),\
@@ -125,6 +123,7 @@ def map_molecules(trj,selection_list,bead_label_list,molecule_types=None,
     resSeq_list = []
     label_list  = []
 
+    start_index = 0
     resSeq = 1
     for ridx,r in residue_list:
         molecule_type = molecule_types[ridx]
