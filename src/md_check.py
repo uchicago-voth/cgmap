@@ -17,7 +17,7 @@ def md_content_equality(traj_1,traj_2,prefix="Traj equality: ",xyz_abs_tol=1e-8)
 
         residual       = sqdiff_mat.mean()**0.5
         max_residual   = sqdiff_mat.max()**0.5
-        print(prefix+"Warning: Mean coordinate residual: {}".format(residual))
+        print(prefix+"Warning: RMS coordinate residual: {}".format(residual))
         print(prefix+"Warning: Max coordinate residual: {}".format(max_residual))
 
         rel_residual_mat = sqdiff_mat**0.5/min_mat
@@ -28,12 +28,12 @@ def md_content_equality(traj_1,traj_2,prefix="Traj equality: ",xyz_abs_tol=1e-8)
         print(prefix+"Warning: Max relative coordinate residual: {}".format(max_residual))
 
         print(prefix+"First sqdiff coordinate frame: {}".format(\
-                (traj_1.xyz[:,:,1]-traj_2.xyz[:,:,1])**2))
+                (traj_1.xyz[:,:,1]-traj_2.xyz[:,:,1])))
 
-        violations = np.nonzero((traj_1.xyz-traj_2.xyz)**2 > xyz_tol)
+        violations = np.nonzero((traj_1.xyz-traj_2.xyz) > xyz_abs_tol)
 
         print(prefix+"Indices violating residual ({}): {}".format(\
-                xyz_tol,violations))
+                xyz_rel_tol,violations))
 
         if (residual > xyz_abs_tol):
             result=False
