@@ -50,6 +50,7 @@ def map_molecules(trj,selection_list,bead_label_list,molecule_types=None,
         Specifying molecule_type_order means that the map will be
         reordered so that all molecules of type 0 come first, then 1, etc.
 
+    Returns
     -------
     traj: trajectory
         trajectory formed by applying given molecular map.
@@ -141,8 +142,24 @@ def map_molecules(trj,selection_list,bead_label_list,molecule_types=None,
     return cg_by_index(trj, index_list, label_list, *args, **kwargs)
 
 def map_identical_molecules(trj,selection_list,bead_label_list,*args,**kwargs):
-    """ This performs the mapping assuming the entire system
-    is a set of identical molecules"""
+    """This performs the mapping assuming the entire system
+    is a set of identical molecules.
+
+    Parameters
+    ----------
+    trj :
+        Trajectory to sum forces on
+    selection_list :
+        Indexible collection of strings
+    bead_label_list :
+        Indexible collection
+
+    Returns
+    -------
+    traj: trajectory
+        trajectory formed by applying given molecular map.
+    """
+
     index_list = []
     resSeq_list = []
     label_list = []
@@ -176,12 +193,14 @@ def map_identical_molecules(trj,selection_list,bead_label_list,*args,**kwargs):
 
 def compute_center(traj,atom_indices=None,use_pbc=True):
     """Compute the center of mass for each frame.
+
     Parameters
     ----------
     traj : Trajectory
         Trajectory to compute center of mass for
     atom_indices : array-like, dtype=int, shape=(n_atoms)
             List of indices of atoms to use in computing center
+
     Returns
     -------
     center : np.ndarray, shape=(n_frames, 3)
@@ -214,6 +233,7 @@ def compute_com(traj,atom_indices=None,use_pbc=True):
         Trajectory to compute center of mass for
     atom_indices : array-like, dtype=int, shape=(n_atoms)
             List of indices of atoms to use in computing com
+
     Returns
     -------
     com : np.ndarray, shape=(n_frames, 3)
