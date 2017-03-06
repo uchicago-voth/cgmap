@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python2
 import numpy as np
 import pandas as pd
 from mdtraj import Trajectory
@@ -33,8 +33,21 @@ def map_forces(traj,atom_indices=None,use_pbc=True):
 
 def map_molecules(trj,selection_list,bead_label_list,molecule_types=None,molecule_type_order=False,*args,**kwargs):
     """ This performs the mapping where each molecule has been assigned a type. 
-
-        Specifying molecule_type_order means that the map will be reordered so that all molecules of type 0 come first, then 1, etc
+        
+    Parameters
+    ----------
+    traj : Trajectory
+        Trajectory to sum forces on
+    selection_list : indexible collection of strings
+    bead_label_list : indexible collection
+    molecule_types : indexible collection of integers
+    molecule_type_order : boolean
+        Specifying molecule_type_order means that the map will be 
+        reordered so that all molecules of type 0 come first, then 1, etc.
+   
+    -------
+    traj: trajectory
+        trajectory formed by applying given molecular map.
     """
     index_list = []
     resSeq_list = []
@@ -259,7 +272,8 @@ def cg_by_selection(trj, selection_string_list, *args, **kwargs):
             print("Warning - selection string returns 0 atoms: '%s'"%sel_string)
     return cg_by_index(trj, atom_indices_list, *args, **kwargs )
 
-def cg_by_index(trj, atom_indices_list, bead_label_list, chain_list=None, segment_id_list=None, resSeq_list=None, inplace=False, bonds=None, mapping_function="com"):
+def cg_by_index(trj, atom_indices_list, bead_label_list, chain_list=None, segment_id_list=None, 
+                resSeq_list=None, inplace=False, bonds=None, mapping_function="com"):
     """Create a coarse grained (CG) trajectory from subsets of atoms by 
         computing centers of mass of selected sets of atoms.
     Parameters
@@ -288,6 +302,7 @@ def cg_by_index(trj, atom_indices_list, bead_label_list, chain_list=None, segmen
         The return value is either ``trj``, or the new trajectory,
         depending on the value of ``inplace``.
     """%mapping_options.keys()
+
     if not len(atom_indices_list)==len(bead_label_list):
         raise ValueError("Must supply a list of bead labels of the same length as a list of selected atom indices")
     for bead_label in bead_label_list:
