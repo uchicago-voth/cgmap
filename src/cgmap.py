@@ -49,27 +49,34 @@ def map_molecules(trj,selection_list,bead_label_list,molecule_types=None,molecul
     traj: trajectory
         trajectory formed by applying given molecular map.
     """
-    index_list = []
-    resSeq_list = []
-    label_list = []
+
+    ### First, deal with optional arguments and argument validation.
+
+    #if the array of molecule types isn't given, assume 1 molecule type.
+    if molecule_types is None:
+        molecule_types = [0]*trj.top.n_residues
 
     n_molecule_types = len(selection_list)
-    if molecule_types is None:
-        molecule_types = [0 for idx in range(trj.top.n_residues)]
 
     if not sorted(set(molecule_types))==range(n_molecule_types):
-        raise ValueError("Error in map molecules, molecule types list must contain only and all numbers from 0 to n_molecule_types-1")
+        raise ValueError("Error in map molecules, molecule types list must " 
+                         "contain only and all numbers from 0 to n_molecule_types-1")
+
     if len(molecule_types) != trj.top.n_residues:
-        raise ValueError("Error in map molecules, molecule types list must have the same length as number of residues")
+        raise ValueError("Error in map molecules, molecule types list must "
+                         "have the same length as number of residues")
+
+    if len(selection_list) != len(bead_label_list):
+        raise ValueError("Error in map molecules, must submit selection list "
+                         "and bead label list of same length")
+
+    for i in range(n_molecule_types):
+        if len(selection_list[i]) != len(bead_label_list[i]):
+            raise ValueError("Error in map molecules, selection list %i and "
+                             "bead label list %i must be of same length"%(i,i))
 
     # get the first molecule with molecule type i
     first_molecules = [molecule_types.index(i) for i in range(n_molecule_types)]
-
-    if len(selection_list) != len(bead_label_list):
-        raise ValueError("Error in map molecules, must submit selection list and bead label list of same length")
-    for i in range(n_molecule_types):
-        if len(selection_list[i]) != len(bead_label_list[i]):
-            raise ValueError("Error in map molecules, selection list %i and bead label list %i must be of same length"%(i,i))
 
     first_indices = []
     internal_indices_list = [] 
@@ -97,6 +104,10 @@ def map_molecules(trj,selection_list,bead_label_list,molecule_types=None,molecul
         residue_list = sorted( enumerate(trj.top.residues),key=lambda x: molecule_types[x[0]])
     else:
         residue_list = enumerate(trj.top.residues)
+
+    index_list  = []
+    resSeq_list = []
+    label_list  = []
 
     resSeq = 1
     for ridx,r in residue_list:
