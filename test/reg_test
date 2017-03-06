@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+#get the top directory of the project.
+git_root=$(git rev-parse --show-toplevel)
+
 function run_reg_test {
 	echo "Running: "$1
 	start_dir=$(pwd)
@@ -16,7 +19,7 @@ function run_reg_test {
 
 global_result=0
 
-for test_dir in ./test/molecular_map_test/*; do
+for test_dir in $git_root/test/molecular_map_test/*; do
 	run_reg_test $test_dir
 	status_val=$?
 	global_result=$((global_result + status_val))
