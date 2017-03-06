@@ -78,27 +78,35 @@ def map_molecules(trj,selection_list,bead_label_list,molecule_types=None,
             raise ValueError("Error in map molecules, selection list %i and "
                              "bead label list %i must be of same length"%(i,i))
 
+    ### generate the indices local to each molecule for mapping
+
     # get the first molecule with molecule type i
     first_molecules = [molecule_types.index(i) for i in range(n_molecule_types)]
 
     first_indices = []
-    internal_indices_list = [] 
+    internal_indices_list = []
+
     for i in range(n_molecule_types):
         internal_indices_list.append([])
         first_index = trj.top.select("(resid == %i)"%(first_molecules[i])).min()
         for sel in selection_list[i]:
-            if sel.find("index")>-1 and sel.find("name")>-1:
+
+            has_index = sel.find("index")> -1
+            has_name  = sel.find("name") > -1
+
+            if has_index and has_name:
                 raise ValueError("Error in map molecules, do not specify "
                                  "selection by index and by type")
-            elif sel.find("index")>-1:
+
+            elif has_index:
                 # use atom selection language to parse selection 
                 #string containing only indices on whole system, then offset later
                 internal_indices = trj.top.select("%s"%(sel))
-            elif sel.find("name")>-1:
+
+            elif has_name:
                 # have to un-shift list because this will be added to current id later
-                internal_indices = trj.top.select("(resid == %i) and (%s)"%(\
-                                                  first_molecules[i],sel)) \
-                                                  - first_index
+                filter_string = "(resid == %i) and (%s)"%(first_molecules[i],sel)
+                internal_indices = trj.top.select(filter_string) - first_index
 
             if len(internal_indices)==0:
                 raise ValueError("Error in map_molecules, selection string '%s'"
