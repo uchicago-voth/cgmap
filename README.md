@@ -1,4 +1,4 @@
-## CGMap: a simple tool to linearly map molecular trajectories stepwise.
+## CGMap: a simple tool to apply linear maps to molecular trajectories
 
 [![Build Status](https://travis-ci.org/alekepd/cgmap.svg?branch=master)](https://travis-ci.org/alekepd/cgmap)
 
