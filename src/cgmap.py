@@ -298,6 +298,36 @@ def compute_com_fast(xyz_i,xyz_all,atom_indices,masses,unitcell_lengths=None):
 mapping_options['com'] = compute_com_fast
 mapping_options['center_of_mass'] = compute_com_fast
 
+def compute_coc(xyz_i, xyz_all, atom_indices, charges, unitcell_lengths=None):
+    """Compute the center of charge for each frame.
+    Parameters 
+    ----------
+    traj : Trajectory
+        Trajectory to computer center of charge for 
+    atom_indices : array-like, dtype=int, shape=(n_atoms)
+        List of indices of atoms to use in computing coc
+    Returns
+    -------
+    coc : np.ndarray, shape=(n_frames, 3)
+        Coordinates of the center of charge for each frame
+    
+    """
+    charges /= charges.sum()
+    xyz = xyz_all[:, atom_indices, :]
+
+    for i, x in enumerate(xyz):
+    #use periodic boundaries by centering relative to first xyz coordinate, then shift back
+        if unitcell_lengths is not None:
+            xyz0 = x[0, :]
+            shift = unitcell_lengths[i]*np.floor( (x - xyz0)/unitcell_lengths[i] + 0.5)
+            x = x - shift
+        xyz_i[i] = x.astype('float64').T.dot(charges).flatten()
+
+    return
+
+mapping_options['coc'] = compute_coc
+mapping_options['center_of_charge'] = compute_coc
+
 def cg_by_selection(trj, selection_string_list, *args, **kwargs):
     """Create a coarse grained (CG) trajectory from list of
     atom selections by computing centers of mass of selected
@@ -341,7 +371,7 @@ def cg_by_selection(trj, selection_string_list, *args, **kwargs):
     return cg_by_index(trj, atom_indices_list, *args, **kwargs )
 
 def cg_by_index(trj, atom_indices_list, bead_label_list, chain_list=None, segment_id_list=None,
-                resSeq_list=None, inplace=False, bonds=None, mapping_function="com"):
+                resSeq_list=None, inplace=False, bonds=None, mapping_function="com", charge_tol=1e-5):
     """Create a coarse grained (CG) trajectory from subsets of atoms by
         computing centers of mass of selected sets of atoms.
     Parameters
@@ -422,14 +452,23 @@ def cg_by_index(trj, atom_indices_list, bead_label_list, chain_list=None, segmen
     masses = np.zeros((n_beads),dtype=np.float64)
     masses_i = []
     charges = np.zeros((n_beads), dtype=np.float64)
+    charges_i = []
     for ii in range(n_beads):
         atom_indices = atom_indices_list[ii]
-        temp = np.array([])
+        temp_masses = np.array([])
+        temp_charges = np.array([])
         for jj in atom_indices:
-            temp = np.append(temp, trj.top.atom(jj).mass)
-            charges[ii] += trj.topology.atom(jj).charge
-        masses_i.append(temp)
+            temp_masses = np.append(temp_masses, trj.top.atom(jj).mass)
+            temp_charges = np.append(temp_charges, trj.top.atom(jj).charge)
+        charges_i.append(temp_charges)
+        masses_i.append(temp_masses)
+        charges[ii] = charges_i[ii].sum()
         masses[ii] = masses_i[ii].sum()
+        
+    if mapping_function == 'coc' or mapping_function == 'center_of_charge':
+        for charge in charges:
+            if np.absolute(charge) < charge_tol:
+                raise ValueError("Total charge on site %i is near zero" % ii)
 
     topology_labels = []
     element_label_dict = {}
@@ -442,12 +481,18 @@ def cg_by_index(trj, atom_indices_list, bead_label_list, chain_list=None, segmen
         atom_indices = atom_indices_list[i]
         bead_label = bead_label_list[i]
         #xyz_i = map_coords(trj,atom_indices)
-
-        map_coords(xyz_i,
-                   trj.xyz,
-                   atom_indices,
-                   masses_i[i],
-                   unitcell_lengths=trj.unitcell_lengths)
+        if mapping_function == 'coc' or mapping_function == 'center_of_charge':
+            map_coords(xyz_i,
+                       trj.xyz,
+                       atom_indices,
+                       charges_i[i],
+                       unitcell_lengths=trj.unitcell_lengths)
+        else:
+            map_coords(xyz_i,
+                       trj.xyz,
+                       atom_indices,
+                       masses_i[i],
+                       unitcell_lengths=trj.unitcell_lengths)
 
         xyz[:,i,:] = xyz_i
 
