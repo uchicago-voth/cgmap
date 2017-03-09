@@ -24,7 +24,6 @@ reference_dir ='./reference/'
 trj = md.load(input_dir + input_traj,top=input_dir + input_top)
 
 #preprocess trajectory content by adding new parts
-for a in trj.top.atoms: a.mass = a.element.mass
 for a in trj.top.atoms: a.charge = 0
 
 #actual map command

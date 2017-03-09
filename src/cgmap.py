@@ -242,10 +242,10 @@ def compute_com(traj,atom_indices=None,use_pbc=True):
 
     if atom_indices is not None and len(atom_indices)>0:
         xyz = traj.xyz[:,atom_indices,:]
-        masses = np.array([a.mass for a in traj.top.atoms if a.index in atom_indices])
+        masses = np.array([a.element.mass for a in traj.top.atoms if a.index in atom_indices])
     else:
         xyz = traj.xyz
-        masses = np.array([a.mass for a in traj.top.atoms])
+        masses = np.array([a.element.mass for a in traj.top.atoms])
 
     com = np.zeros((traj.n_frames, 3))
     masses /= masses.sum()
@@ -458,7 +458,7 @@ def cg_by_index(trj, atom_indices_list, bead_label_list, chain_list=None, segmen
         temp_masses = np.array([])
         temp_charges = np.array([])
         for jj in atom_indices:
-            temp_masses = np.append(temp_masses, trj.top.atom(jj).mass)
+            temp_masses = np.append(temp_masses, trj.top.atom(jj).element.mass)
             temp_charges = np.append(temp_charges, trj.top.atom(jj).charge)
         charges_i.append(temp_charges)
         masses_i.append(temp_masses)

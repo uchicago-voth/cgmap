@@ -70,7 +70,6 @@ trj = md.load(input_dir + input_traj,top=input_dir + input_top)
 molecule_types = [lipid_types.index(r.name) for r in trj.top.residues]
 
 #preprocess trajectory content by adding new parts
-for a in trj.top.atoms: a.mass = a.element.mass
 for a in trj.top.atoms: a.charge = 0
 
 #actual map command

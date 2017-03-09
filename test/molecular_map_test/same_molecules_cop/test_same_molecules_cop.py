@@ -9,6 +9,7 @@ import sys
 sys.path.append('../../../src/')
 import cgmap as cg
 import mdtraj as md
+from mdtraj.core.element import Element
 import md_check as check
 
 ############################### config #####################################
@@ -61,7 +62,6 @@ label_lists = ['DPH','DPM','DPT']
 #molecule_types = [lipid_types.index(r.name) for r in trj.top.residues]
 #
 ##preprocess trajectory content by adding new parts
-#for a in trj.top.atoms: a.mass = a.element.mass
 #for a in trj.top.atoms: a.charge = 0
 #
 ##actual map command
@@ -83,8 +83,8 @@ trj = md.load(input_dir + input_traj,top=input_dir + input_top)
 molecule_types = [lipid_types.index(r.name) for r in trj.top.residues]
 
 #preprocess trajectory content by adding new parts
-for a in trj.top.atoms: a.mass = 1 #null mass part
 for a in trj.top.atoms: a.charge = 0
+for a in trj.top.atoms: a.element = Element.getBySymbol('H')
 
 #actual map command
 cg_trj = cg.map_molecules(            trj = trj,
