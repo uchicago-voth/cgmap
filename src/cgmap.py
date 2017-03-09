@@ -449,21 +449,43 @@ def cg_by_index(trj, atom_indices_list, bead_label_list, chain_list=None, segmen
                       order='C')
     columns = ["serial","name","element","resSeq","resName","chainID"]
 
+    #total masse for each cg bead.
     masses = np.zeros((n_beads),dtype=np.float64)
+    #list of masses for elements in cg bead.
     masses_i = []
-    charges = np.zeros((n_beads), dtype=np.float64)
-    charges_i = []
+
+    #masses
     for ii in range(n_beads):
+        #atoms in curent cg bead.
         atom_indices = atom_indices_list[ii]
+        #first, construct lists of masses in current cg bead.
         temp_masses = np.array([])
-        temp_charges = np.array([])
         for jj in atom_indices:
             temp_masses = np.append(temp_masses, trj.top.atom(jj).element.mass)
-            temp_charges = np.append(temp_charges, trj.top.atom(jj).charge)
-        charges_i.append(temp_charges)
+
         masses_i.append(temp_masses)
-        charges[ii] = charges_i[ii].sum()
         masses[ii] = masses_i[ii].sum()
+
+    if hasattr(trj.top.atom(1), 'charge'):
+        #total charge for each cg bead.
+        charges = np.zeros((n_beads), dtype=np.float64)
+        #lists of charges for in current cg bead
+        charges_i = []
+
+        #charges
+        for ii in range(n_beads):
+
+            #atoms in curent cg bead.
+            atom_indices = atom_indices_list[ii]
+
+            #first, construct lists of masses in current cg bead.
+            temp_charges = np.array([])
+
+            for jj in atom_indices:
+                temp_charges = np.append(temp_charges, trj.top.atom(jj).charge)
+
+            charges_i.append(temp_charges)
+            charges[ii] = charges_i[ii].sum()
         
     if mapping_function == 'coc' or mapping_function == 'center_of_charge':
         for charge in charges:
