@@ -45,6 +45,10 @@ def map_molecules(trj,selection_list,bead_label_list,transfer_labels=False,
         Indexible collection of strings
     bead_label_list :
         Indexible collection
+    transfer_labels :
+        Whether to transfer over labels in @trj. Moves over resSeq, resName
+        for every bead, assuming that the atoms in each bead are uniform in
+        those qualities.
     molecule_types :
         Indexible collection of integers
     molecule_type_order : boolean
@@ -190,6 +194,10 @@ def map_identical_molecules(trj,selection_list,bead_label_list,
         Indexible collection of strings
     bead_label_list :
         Indexible collection
+    transfer_labels :
+        Whether to transfer over labels in @trj. Moves over resSeq, resName
+        for every bead, assuming that the atoms in each bead are uniform in
+        those qualities.
 
     Returns
     -------
