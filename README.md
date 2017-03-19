@@ -2,14 +2,16 @@
 
 [![Build Status](https://travis-ci.org/alekepd/cgmap.svg?branch=master)](https://travis-ci.org/alekepd/cgmap)
 
-CGMap provides a tool to map fine-graine (FG) molecular dynamics trajectories
+CGMap provides a tool to map fine-grained (FG) molecular dynamics trajectories
 to coarse-grained (CG) trajectories. The map between FG and CG trajectories are
 constrainted to be linear, with weights defined as either corresponding to
-center of points, center of mass, or center of charge (TBD).
+center of points, center of mass, or center of charge.
 
-This code isn't suited to general featurization at this time; this will likely
-require porting to C++/Rust do make sure that the application of arbitrary
-functions on the trajectory is efficient.
+This code is in beta. Plese report bugs on the github bug tracker.
 
-Currently, the mdtraj library is heavily utilized. Implementation is in pure
-python, but this is subject to change as seen neccesary.
+Periodic boundary issues are not currently addressed. Generally, wrapping
+keeping molecules whole, mapping, and then remapping is the best course of
+action.
+
+See the test directory for example usage. No command line interface is present,
+nor planned.
