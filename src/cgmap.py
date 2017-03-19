@@ -58,6 +58,8 @@ def map_molecules(trj,selection_list,bead_label_list,transfer_labels=False,
     """
 
     ### First, deal with optional arguments and argument validation.
+    if molecule_type_order is True:
+        raise ValueError("molecule_type_order not currently supported.")
 
     #if the array of molecule types isn't given, assume 1 molecule type.
     if molecule_types is None:
