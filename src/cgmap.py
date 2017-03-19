@@ -5,6 +5,7 @@ from mdtraj import Trajectory
 from mdtraj import Topology
 from mdtraj import element
 from mdtraj.geometry import distance
+from top_manip import typed_elementwise_rep
 
 mapping_options = {}
 
@@ -31,8 +32,8 @@ def map_forces(traj,atom_indices=None,use_pbc=True):
 
     return mapped_forces
 
-def map_molecules(trj,selection_list,bead_label_list,molecule_types=None,
-                  molecule_type_order=False,*args,**kwargs):
+def map_molecules(trj,selection_list,bead_label_list,transfer_labels=False,
+                  molecule_types=None, molecule_type_order=False,*args,**kwargs):
     """ This performs the mapping where each molecule has been assigned a
     type.
 
@@ -139,9 +140,43 @@ def map_molecules(trj,selection_list,bead_label_list,molecule_types=None,
         resSeq = resSeq+1
         start_index = start_index + r.n_atoms
 
-    return cg_by_index(trj, index_list, label_list, *args, **kwargs)
+    cg_trj = cg_by_index(trj, index_list, label_list, *args, **kwargs)
 
-def map_identical_molecules(trj,selection_list,bead_label_list,*args,**kwargs):
+    #do a more sophisticated labeling.
+    if (transfer_labels is True):
+
+        df_aa_top = trj.top.to_dataframe()[0]
+        df_cg_top = cg_trj.top.to_dataframe()[0]
+
+        #get resSeq info.
+        aa_resSeq = df_aa_top.ix[:,'resSeq']
+
+        #find atom indices for first atoms of each residue.
+        res_starting_indices = \
+            np.sort(np.unique(aa_resSeq,return_index=True)[1])
+
+        #get resids and resnames for startings atoms.
+        aa_starting_resids    = df_aa_top.ix[res_starting_indices,'resSeq']
+        aa_starting_resnames  = df_aa_top.ix[res_starting_indices,'resName']
+
+        #needed for duplicating atomistic info across cg molecules
+        n_sites_per_cg = [ len(desc) for desc in bead_label_list ]
+
+        #generate and place resids
+        cg_resids = typed_elementwise_rep(aa_starting_resids,molecule_types,n_sites_per_cg)
+        df_cg_top.ix[:,"resSeq"] = cg_resids
+
+        #generate and place resNames
+        cg_resnames = typed_elementwise_rep(aa_starting_resnames,molecule_types,n_sites_per_cg)
+        df_cg_top.ix[:,"resName"] = cg_resnames
+
+        #convert and put back.
+        cg_trj.top = Topology.from_dataframe(df_cg_top)
+
+    return(cg_trj)
+
+def map_identical_molecules(trj,selection_list,bead_label_list,
+                            transfer_labels=False,*args,**kwargs):
     """This performs the mapping assuming the entire system
     is a set of identical molecules.
 
@@ -189,7 +224,40 @@ def map_identical_molecules(trj,selection_list,bead_label_list,*args,**kwargs):
         resSeq = resSeq+1
         start_index = start_index + r.n_atoms
 
-    return cg_by_index(trj, index_list, label_list, *args, **kwargs)
+    cg_trj = cg_by_index(trj, index_list, label_list, *args, **kwargs)
+
+    if (transfer_labels is True):
+
+        df_aa_top = trj.top.to_dataframe()[0]
+        df_cg_top = cg_trj.top.to_dataframe()[0]
+
+        #get resSeq info.
+        aa_resSeq = df_aa_top.ix[:,'resSeq']
+
+        #find atom indices for first atoms of each residue.
+        res_starting_indices = \
+            np.sort(np.unique(aa_resSeq,return_index=True)[1])
+
+        #get resids and resnames for startings atoms.
+        aa_starting_resids    = df_aa_top.ix[res_starting_indices,'resSeq']
+        aa_starting_resnames  = df_aa_top.ix[res_starting_indices,'resName']
+
+        #needed for duplicating atomistic info across cg molecules
+        n_sites_per_cg = [[ len(bead_label_list) ]]
+        molecule_types = np.repeat(0,len(aa_starting_resids))
+
+        #generate and place resids
+        cg_resids = typed_elementwise_rep(aa_starting_resids,molecule_types,n_sites_per_cg)
+        df_cg_top.ix[:,"resSeq"] = cg_resids
+
+        #generate and place resNames
+        cg_resnames = typed_elementwise_rep(aa_starting_resnames,molecule_types,n_sites_per_cg)
+        df_cg_top.ix[:,"resName"] = cg_resnames
+
+        #convert and put back.
+        cg_trj.top = Topology.from_dataframe(df_cg_top)
+
+    return(cg_trj)
 
 def compute_center(traj,atom_indices=None,use_pbc=True):
     """Compute the center of mass for each frame.
