@@ -303,45 +303,6 @@ def compute_center(traj,atom_indices=None,use_pbc=True):
     return center
 mapping_options['center'] = compute_center
 
-def compute_com(traj,atom_indices=None,use_pbc=True):
-    """Compute the center of mass for each frame.
-    Parameters
-    ----------
-    traj : Trajectory
-        Trajectory to compute center of mass for
-    atom_indices : array-like, dtype=int, shape=(n_atoms)
-            List of indices of atoms to use in computing com
-
-    Returns
-    -------
-    com : np.ndarray, shape=(n_frames, 3)
-         Coordinates of the center of mass for each frame
-    """
-
-    if atom_indices is not None and len(atom_indices)>0:
-        xyz = traj.xyz[:,atom_indices,:]
-        masses = np.array([a.element.mass for a in traj.top.atoms if a.index in atom_indices])
-    else:
-        xyz = traj.xyz
-        masses = np.array([a.element.mass for a in traj.top.atoms])
-
-    com = np.zeros((traj.n_frames, 3))
-    masses /= masses.sum()
-
-    for i, x in enumerate(xyz):
-    # use periodic boundaries by centering relative to
-    #first xyz coordinate, then shift back
-        if use_pbc is True:
-            xyz0 = x[0,:]
-            shift = traj[i].unitcell_lengths*np.floor( \
-                    (x - xyz0)/traj[i].unitcell_lengths + 0.5)
-            x = x - shift
-        com[i, :] = x.astype('float64').T.dot(masses).flatten()
-
-    return com
-mapping_options['com_slow'] = compute_com
-mapping_options['center_of_mass_slow'] = compute_com
-
 def compute_com_fast(xyz_i,xyz_all,atom_indices,masses,unitcell_lengths=None):
     """Compute the center of mass for each frame.
     Parameters
