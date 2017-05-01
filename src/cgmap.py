@@ -303,24 +303,23 @@ def compute_center(traj,atom_indices=None,use_pbc=True):
     return center
 mapping_options['center'] = compute_center
 
-def compute_com_fast(xyz_i,xyz_all,atom_indices,masses,unitcell_lengths=None):
+def compute_center_weighted(xyz_i,xyz_all,atom_indices,masses,unitcell_lengths=None):
     """Compute the center of mass for each frame.
+
     Parameters
     ----------
     traj : Trajectory
         Trajectory to compute center of mass for
     atom_indices : array-like, dtype=int, shape=(n_atoms)
             List of indices of atoms to use in computing com
+
     Returns
     -------
-    com : np.ndarray, shape=(n_frames, 3)
-         Coordinates of the center of mass for each frame
+    None
     """
 
-    #com = xyz_i
     masses /= masses.sum()
     xyz = xyz_all[:,atom_indices,:]
-
 
     for i, x in enumerate(xyz):
     # use periodic boundaries by centering relative to first
@@ -332,40 +331,12 @@ def compute_com_fast(xyz_i,xyz_all,atom_indices,masses,unitcell_lengths=None):
             x = x - shift
         xyz_i[i] = x.astype('float64').T.dot(masses).flatten()
 
-    return
-#    return com
-mapping_options['com'] = compute_com_fast
-mapping_options['center_of_mass'] = compute_com_fast
+    return None
 
-def compute_coc(xyz_i, xyz_all, atom_indices, charges, unitcell_lengths=None):
-    """Compute the center of charge for each frame.
-    Parameters 
-    ----------
-    traj : Trajectory
-        Trajectory to computer center of charge for 
-    atom_indices : array-like, dtype=int, shape=(n_atoms)
-        List of indices of atoms to use in computing coc
-    Returns
-    -------
-    coc : np.ndarray, shape=(n_frames, 3)
-        Coordinates of the center of charge for each frame
-    
-    """
-    charges /= charges.sum()
-    xyz = xyz_all[:, atom_indices, :]
-
-    for i, x in enumerate(xyz):
-    #use periodic boundaries by centering relative to first xyz coordinate, then shift back
-        if unitcell_lengths is not None:
-            xyz0 = x[0, :]
-            shift = unitcell_lengths[i]*np.floor( (x - xyz0)/unitcell_lengths[i] + 0.5)
-            x = x - shift
-        xyz_i[i] = x.astype('float64').T.dot(charges).flatten()
-
-    return
-
-mapping_options['coc'] = compute_coc
-mapping_options['center_of_charge'] = compute_coc
+mapping_options['com'] = compute_center_weighted
+mapping_options['center_of_mass'] = compute_center_weighted
+mapping_options['coc'] = compute_center_weighted
+mapping_options['center_of_charge'] = compute_center_weighted
 
 def cg_by_selection(trj, selection_string_list, *args, **kwargs):
     """Create a coarse grained (CG) trajectory from list of
