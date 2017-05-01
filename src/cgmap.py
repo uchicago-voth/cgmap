@@ -269,57 +269,33 @@ def map_identical_molecules(trj,selection_list,bead_label_list,
 
     return(cg_trj)
 
-def compute_center(traj,atom_indices=None,use_pbc=True):
-    """Compute the center of mass for each frame.
+def compute_center_weighted(xyz_i,xyz_all,atom_indices,weights=None,unitcell_lengths=None):
+    """Compute the weighted center over selected atoms for a coordinate matrix.
 
     Parameters
     ----------
-    traj : Trajectory
-        Trajectory to compute center of mass for
-    atom_indices : array-like, dtype=int, shape=(n_atoms)
+    xyz_i: array-like, dtype=float, shape=(n_steps,n_sites,n_dim)
+            Holds output of linear map operations.
+    xyz: array-like, dtype=float, shape=(n_steps,n_atoms,n_dim)
+            Holds input coordinates.
+    atom_indices : array-like, dtype=int, shape=(n_sites)
             List of indices of atoms to use in computing center
-
-    Returns
-    -------
-    center : np.ndarray, shape=(n_frames, 3)
-         Coordinates of the mean position of atom_indices for each frame
-    """
-
-    if atom_indices is not None and len(atom_indices)>0:
-        xyz = traj.xyz[:,atom_indices,:]
-    else:
-        xyz = traj.xyz
-
-    center = np.zeros((traj.n_frames, 3))
-
-    for i, x in enumerate(xyz):
-# use periodic boundaries by centering relative to first xyz coordinate, then shift back
-        if use_pbc is True:
-            xyz0 = x[0,:]
-            shift = traj[i].unitcell_lengths*np.floor( (x - xyz0)/traj[i].unitcell_lengths + 0.5)
-            x = x - shift
-        center[i, :] = x.astype('float64').mean(axis=0)
-
-    return center
-mapping_options['center'] = compute_center
-
-def compute_center_weighted(xyz_i,xyz_all,atom_indices,masses,unitcell_lengths=None):
-    """Compute the center of mass for each frame.
-
-    Parameters
-    ----------
-    traj : Trajectory
-        Trajectory to compute center of mass for
-    atom_indices : array-like, dtype=int, shape=(n_atoms)
-            List of indices of atoms to use in computing com
+    weights : array-like, dtype=float, shape=(n_sites)
+            Weights used to calculate positions (normalized in function)
+    unitcell_lengths: array-like, dtype=float, shape=(n_dim)
+            Unitcell lengths; Positions are calculated in a minimum image.
 
     Returns
     -------
     None
     """
 
-    masses /= masses.sum()
     xyz = xyz_all[:,atom_indices,:]
+
+    if (weights is None):
+        weights = np.ones(length(atom_indices))
+
+    weights /= weights.sum()
 
     for i, x in enumerate(xyz):
     # use periodic boundaries by centering relative to first
@@ -329,10 +305,11 @@ def compute_center_weighted(xyz_i,xyz_all,atom_indices,masses,unitcell_lengths=N
             shift = unitcell_lengths[i]*np.floor( \
                     (x - xyz0)/unitcell_lengths[i] + 0.5)
             x = x - shift
-        xyz_i[i] = x.astype('float64').T.dot(masses).flatten()
+        xyz_i[i] = x.astype('float64').T.dot(weights).flatten()
 
     return None
 
+mapping_options['center'] = compute_center_weighted
 mapping_options['com'] = compute_center_weighted
 mapping_options['center_of_mass'] = compute_center_weighted
 mapping_options['coc'] = compute_center_weighted
