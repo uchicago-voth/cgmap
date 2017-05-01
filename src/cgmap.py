@@ -181,6 +181,36 @@ def map_molecules(trj,selection_list,bead_label_list,transfer_labels=False,
 
     return(cg_trj)
 
+def gen_overlap_mod_weights(indices_list,assume_unique=True):
+    """
+    Parameters
+    ----------
+    indices_list: list of indices to look for modifications between.
+
+    Returns
+    -------
+    weights: list
+        list of weights
+    """
+
+    inverse_weights = [ np.ones(len(item)) for item in indices_list ]
+
+    sets = [ set(item) for item in indices_list ]
+
+    #Not very pythonic, but limited by triangle loop.
+    for i1 in xrange(len(sets)):
+        for i2 in xrange(i1+1,len(sets)):
+            elements = np.array(list(sets[i1].intersection(sets[i2])))
+
+            locs = np.in1d(indices_list[i1],elements,assume_unique=assume_unique)
+            inverse_weights[i1][locs] = inverse_weights[i1][locs] + 1
+
+            locs = np.in1d(indices_list[i2],elements,assume_unique=assume_unique)
+            inverse_weights[i2][locs] = inverse_weights[i2][locs] + 1
+
+    #we invert the weights before we return them.
+    return([ np.divide(1.0,item) for item in inverse_weights])
+
 def map_identical_molecules(trj,selection_list,bead_label_list,
                             transfer_labels=False,*args,**kwargs):
     """This performs the mapping assuming the entire system
@@ -358,7 +388,8 @@ def cg_by_selection(trj, selection_string_list, *args, **kwargs):
     return cg_by_index(trj, atom_indices_list, *args, **kwargs )
 
 def cg_by_index(trj, atom_indices_list, bead_label_list, chain_list=None, segment_id_list=None,
-                resSeq_list=None, inplace=False, bonds=None, mapping_function="com", charge_tol=1e-5):
+                resSeq_list=None, inplace=False, bonds=None,
+                split_shared_atoms=False, mapping_function="com", charge_tol=1e-5):
     """Create a coarse grained (CG) trajectory from subsets of atoms by
         computing centers of mass of selected sets of atoms.
     Parameters
@@ -382,6 +413,9 @@ def cg_by_index(trj, atom_indices_list, bead_label_list, chain_list=None, segmen
         ``trj`` is not modified.
     bonds : array-like,dtype=int, shape=(n_bonds,2), default=None
         If specified, sets these bonds in new topology
+    split_shared_atoms: boolean
+        If specified, check to see if atoms are shared per molecule in beads. If
+        so, equally divide their weight accordingly for each bead.
     mapping_function: string, default='com': how to map xyz coordinates
         options: %s
 
@@ -482,28 +516,32 @@ def cg_by_index(trj, atom_indices_list, bead_label_list, chain_list=None, segmen
     topology_labels = []
     element_label_dict = {}
 
-    xyz_i = np.zeros((trj.xyz.shape[0],trj.xyz.shape[2]),
-                     dtype=trj.xyz.dtype,
-                     order='C')
+    if (split_shared_atoms):
+        mod_weights_list = gen_overlap_mod_weights(atom_indices_list) 
+    else:
+        mod_weights_list = [ None for item in atom_indices_list ]
 
     for i in range(n_beads):
         atom_indices = atom_indices_list[i]
         bead_label = bead_label_list[i]
-        #xyz_i = map_coords(trj,atom_indices)
-        if mapping_function == 'coc' or mapping_function == 'center_of_charge':
-            map_coords(xyz_i,
-                       trj.xyz,
-                       atom_indices,
-                       charges_i[i],
-                       unitcell_lengths=trj.unitcell_lengths)
-        else:
-            map_coords(xyz_i,
-                       trj.xyz,
-                       atom_indices,
-                       masses_i[i],
-                       unitcell_lengths=trj.unitcell_lengths)
+        mod_weights = mod_weights_list[i]
+        xyz_i = xyz[:,i,:]
 
-        xyz[:,i,:] = xyz_i
+        if mapping_function == 'coc' or mapping_function == 'center_of_charge':
+            weights = charges_i[i]
+        elif mapping_function == 'com' or mapping_function == 'center_of_mass':
+            weights = masses_i[i]
+        elif mapping_function == 'center':
+            weights = np.ones(len(atom_indices))
+
+        if (mod_weights is not None):
+            weights[:] = np.multiply(weights, mod_weights)
+
+        map_coords(xyz_i,
+                   trj.xyz,
+                   atom_indices,
+                   weights,
+                   unitcell_lengths=trj.unitcell_lengths)
 
         if "forces" in trj.__dict__ and len(trj.forces)>0:
             forces_i = map_forces(trj,atom_indices)
