@@ -15,7 +15,7 @@ tests are provided. Note that numerical differences in underlying libraries
 (through numpy) often create slightly different outputs.
 
 Periodic boundary issues are not currently validated. Generally, wrapping
-keeping molecules whole, mapping, and then rewrapped is the best course of
+keeping molecules whole, mapping, and then rewrapping is the best course of
 action, although some effort in the code is made to automatically resolve this.
 
 See the test directory for many cases of example usage. No command line
