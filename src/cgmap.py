@@ -263,7 +263,9 @@ def map_identical_molecules(trj,selection_list,bead_label_list,transfer_labels=F
                          transfer_labels = transfer_labels,
                           molecule_types = null_molecule_types,
                      molecule_type_order = False,
-                             return_call = return_call)
+                             return_call = return_call,
+                                   *args,
+                                   **kwargs)
 
     return(out)
 
