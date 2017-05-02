@@ -33,7 +33,8 @@ def map_forces(traj,atom_indices=None,use_pbc=True):
     return mapped_forces
 
 def map_molecules(trj,selection_list,bead_label_list,transfer_labels=False,
-                  molecule_types=None, molecule_type_order=False,*args,**kwargs):
+                  molecule_types=None, molecule_type_order=False,
+                  return_call=False,*args,**kwargs):
     """ This performs the mapping where each molecule has been assigned a
     type.
 
@@ -54,11 +55,16 @@ def map_molecules(trj,selection_list,bead_label_list,transfer_labels=False,
     molecule_type_order : boolean
         Specifying molecule_type_order means that the map will be
         reordered so that all molecules of type 0 come first, then 1, etc.
+    return_call: boolean
+        Whether to return the arguments that cg_by_index would be called with
+        instead of actually calling it. Useful for modifying the call.
 
     Returns
     -------
     traj: trajectory
         trajectory formed by applying given molecular map.
+    -OR-
+    tuple: list of arguments which would be passed to cg_by_index
     """
 
     ### First, deal with optional arguments and argument validation.
@@ -120,6 +126,7 @@ def map_molecules(trj,selection_list,bead_label_list,transfer_labels=False,
             if len(internal_indices)==0:
                 raise ValueError("Error in map_molecules, selection string '%s'"
                                  "produced an empty list of atom indices"%sel)
+
             mol_indices.append(internal_indices)
 
 
@@ -145,6 +152,13 @@ def map_molecules(trj,selection_list,bead_label_list,transfer_labels=False,
             label_list.append(bead_label_list[molecule_type][bead_idx])
         resSeq = resSeq+1
         start_index = start_index + r.n_atoms
+
+    if (return_call is True):
+        arg_list=[trj, index_list, label_list]
+        arg_list.extend(args)
+        arg_list.append(kwargs)
+        return(arg_list)
+        #exit early.
 
     cg_trj = cg_by_index(trj, index_list, label_list, *args, **kwargs)
 
@@ -180,6 +194,36 @@ def map_molecules(trj,selection_list,bead_label_list,transfer_labels=False,
         cg_trj.top = Topology.from_dataframe(df_cg_top)
 
     return(cg_trj)
+
+def gen_unique_overlap_mod_weights(indices_list,assume_unique=True):
+    """
+    Parameters
+    ----------
+    indices_list: list of indices to look for modifications between.
+
+    Returns
+    -------
+    weights: list
+        list of weights
+    """
+
+    inverse_weights = [ np.ones(len(item)) for item in indices_list ]
+
+    sets = [ set(item) for item in indices_list ]
+
+    #Not very pythonic, but limited by triangle loop.
+    for i1 in xrange(len(sets)):
+        for i2 in xrange(i1+1,len(sets)):
+            elements = np.array(list(sets[i1].intersection(sets[i2])))
+
+            locs = np.in1d(indices_list[i1],elements,assume_unique=assume_unique)
+            inverse_weights[i1][locs] = inverse_weights[i1][locs] + 1
+
+            locs = np.in1d(indices_list[i2],elements,assume_unique=assume_unique)
+            inverse_weights[i2][locs] = inverse_weights[i2][locs] + 1
+
+    #we invert the weights before we return them.
+    return([ np.divide(1.0,item) for item in inverse_weights])
 
 def map_identical_molecules(trj,selection_list,bead_label_list,
                             transfer_labels=False,*args,**kwargs):
@@ -269,97 +313,33 @@ def map_identical_molecules(trj,selection_list,bead_label_list,
 
     return(cg_trj)
 
-def compute_center(traj,atom_indices=None,use_pbc=True):
-    """Compute the center of mass for each frame.
+def compute_center_weighted(xyz_i,xyz_all,atom_indices,weights=None,unitcell_lengths=None):
+    """Compute the weighted center over selected atoms for a coordinate matrix.
 
     Parameters
     ----------
-    traj : Trajectory
-        Trajectory to compute center of mass for
-    atom_indices : array-like, dtype=int, shape=(n_atoms)
+    xyz_i: array-like, dtype=float, shape=(n_steps,n_sites,n_dim)
+            Holds output of linear map operations.
+    xyz: array-like, dtype=float, shape=(n_steps,n_atoms,n_dim)
+            Holds input coordinates.
+    atom_indices : array-like, dtype=int, shape=(n_sites)
             List of indices of atoms to use in computing center
+    weights : array-like, dtype=float, shape=(n_sites)
+            Weights used to calculate positions (normalized in function)
+    unitcell_lengths: array-like, dtype=float, shape=(n_dim)
+            Unitcell lengths; Positions are calculated in a minimum image.
 
     Returns
     -------
-    center : np.ndarray, shape=(n_frames, 3)
-         Coordinates of the mean position of atom_indices for each frame
+    None
     """
 
-    if atom_indices is not None and len(atom_indices)>0:
-        xyz = traj.xyz[:,atom_indices,:]
-    else:
-        xyz = traj.xyz
-
-    center = np.zeros((traj.n_frames, 3))
-
-    for i, x in enumerate(xyz):
-# use periodic boundaries by centering relative to first xyz coordinate, then shift back
-        if use_pbc is True:
-            xyz0 = x[0,:]
-            shift = traj[i].unitcell_lengths*np.floor( (x - xyz0)/traj[i].unitcell_lengths + 0.5)
-            x = x - shift
-        center[i, :] = x.astype('float64').mean(axis=0)
-
-    return center
-mapping_options['center'] = compute_center
-
-def compute_com(traj,atom_indices=None,use_pbc=True):
-    """Compute the center of mass for each frame.
-    Parameters
-    ----------
-    traj : Trajectory
-        Trajectory to compute center of mass for
-    atom_indices : array-like, dtype=int, shape=(n_atoms)
-            List of indices of atoms to use in computing com
-
-    Returns
-    -------
-    com : np.ndarray, shape=(n_frames, 3)
-         Coordinates of the center of mass for each frame
-    """
-
-    if atom_indices is not None and len(atom_indices)>0:
-        xyz = traj.xyz[:,atom_indices,:]
-        masses = np.array([a.element.mass for a in traj.top.atoms if a.index in atom_indices])
-    else:
-        xyz = traj.xyz
-        masses = np.array([a.element.mass for a in traj.top.atoms])
-
-    com = np.zeros((traj.n_frames, 3))
-    masses /= masses.sum()
-
-    for i, x in enumerate(xyz):
-    # use periodic boundaries by centering relative to
-    #first xyz coordinate, then shift back
-        if use_pbc is True:
-            xyz0 = x[0,:]
-            shift = traj[i].unitcell_lengths*np.floor( \
-                    (x - xyz0)/traj[i].unitcell_lengths + 0.5)
-            x = x - shift
-        com[i, :] = x.astype('float64').T.dot(masses).flatten()
-
-    return com
-mapping_options['com_slow'] = compute_com
-mapping_options['center_of_mass_slow'] = compute_com
-
-def compute_com_fast(xyz_i,xyz_all,atom_indices,masses,unitcell_lengths=None):
-    """Compute the center of mass for each frame.
-    Parameters
-    ----------
-    traj : Trajectory
-        Trajectory to compute center of mass for
-    atom_indices : array-like, dtype=int, shape=(n_atoms)
-            List of indices of atoms to use in computing com
-    Returns
-    -------
-    com : np.ndarray, shape=(n_frames, 3)
-         Coordinates of the center of mass for each frame
-    """
-
-    #com = xyz_i
-    masses /= masses.sum()
     xyz = xyz_all[:,atom_indices,:]
 
+    if (weights is None):
+        weights = np.ones(length(atom_indices))
+
+    weights /= weights.sum()
 
     for i, x in enumerate(xyz):
     # use periodic boundaries by centering relative to first
@@ -369,42 +349,15 @@ def compute_com_fast(xyz_i,xyz_all,atom_indices,masses,unitcell_lengths=None):
             shift = unitcell_lengths[i]*np.floor( \
                     (x - xyz0)/unitcell_lengths[i] + 0.5)
             x = x - shift
-        xyz_i[i] = x.astype('float64').T.dot(masses).flatten()
+        xyz_i[i] = x.astype('float64').T.dot(weights).flatten()
 
-    return
-#    return com
-mapping_options['com'] = compute_com_fast
-mapping_options['center_of_mass'] = compute_com_fast
+    return None
 
-def compute_coc(xyz_i, xyz_all, atom_indices, charges, unitcell_lengths=None):
-    """Compute the center of charge for each frame.
-    Parameters 
-    ----------
-    traj : Trajectory
-        Trajectory to computer center of charge for 
-    atom_indices : array-like, dtype=int, shape=(n_atoms)
-        List of indices of atoms to use in computing coc
-    Returns
-    -------
-    coc : np.ndarray, shape=(n_frames, 3)
-        Coordinates of the center of charge for each frame
-    
-    """
-    charges /= charges.sum()
-    xyz = xyz_all[:, atom_indices, :]
-
-    for i, x in enumerate(xyz):
-    #use periodic boundaries by centering relative to first xyz coordinate, then shift back
-        if unitcell_lengths is not None:
-            xyz0 = x[0, :]
-            shift = unitcell_lengths[i]*np.floor( (x - xyz0)/unitcell_lengths[i] + 0.5)
-            x = x - shift
-        xyz_i[i] = x.astype('float64').T.dot(charges).flatten()
-
-    return
-
-mapping_options['coc'] = compute_coc
-mapping_options['center_of_charge'] = compute_coc
+mapping_options['center'] = compute_center_weighted
+mapping_options['com'] = compute_center_weighted
+mapping_options['center_of_mass'] = compute_center_weighted
+mapping_options['coc'] = compute_center_weighted
+mapping_options['center_of_charge'] = compute_center_weighted
 
 def cg_by_selection(trj, selection_string_list, *args, **kwargs):
     """Create a coarse grained (CG) trajectory from list of
@@ -449,7 +402,8 @@ def cg_by_selection(trj, selection_string_list, *args, **kwargs):
     return cg_by_index(trj, atom_indices_list, *args, **kwargs )
 
 def cg_by_index(trj, atom_indices_list, bead_label_list, chain_list=None, segment_id_list=None,
-                resSeq_list=None, inplace=False, bonds=None, mapping_function="com", charge_tol=1e-5):
+                resSeq_list=None, inplace=False, bonds=None, split_shared_atoms=False, 
+                mod_weights_list=None, mapping_function="com", charge_tol=1e-5):
     """Create a coarse grained (CG) trajectory from subsets of atoms by
         computing centers of mass of selected sets of atoms.
     Parameters
@@ -473,6 +427,9 @@ def cg_by_index(trj, atom_indices_list, bead_label_list, chain_list=None, segmen
         ``trj`` is not modified.
     bonds : array-like,dtype=int, shape=(n_bonds,2), default=None
         If specified, sets these bonds in new topology
+    split_shared_atoms: boolean
+        If specified, check to see if atoms are shared per molecule in beads. If
+        so, equally divide their weight accordingly for each bead.
     mapping_function: string, default='com': how to map xyz coordinates
         options: %s
 
@@ -494,6 +451,7 @@ def cg_by_index(trj, atom_indices_list, bead_label_list, chain_list=None, segmen
         if not (type(bead_label) is str) or len(bead_label)>4 or len(bead_label)<1:
             raise ValueError("Specified bead label '%s' is not valid, \
                              must be a string between 1 and 4 characters"%bead_label)
+
     bead_label_list = [ bead_label.upper() for bead_label in bead_label_list ]
 
     if mapping_function not in mapping_options:
@@ -525,6 +483,7 @@ def cg_by_index(trj, atom_indices_list, bead_label_list, chain_list=None, segmen
     forces = np.zeros((trj.xyz.shape[0],n_beads,trj.xyz.shape[2]),
                       dtype=np.double,
                       order='C')
+
     columns = ["serial","name","element","resSeq","resName","chainID"]
 
     #total masse for each cg bead.
@@ -573,28 +532,29 @@ def cg_by_index(trj, atom_indices_list, bead_label_list, chain_list=None, segmen
     topology_labels = []
     element_label_dict = {}
 
-    xyz_i = np.zeros((trj.xyz.shape[0],trj.xyz.shape[2]),
-                     dtype=trj.xyz.dtype,
-                     order='C')
+    if (split_shared_atoms):
+        mod_weights_list = gen_unique_overlap_mod_weights(atom_indices_list) 
 
     for i in range(n_beads):
         atom_indices = atom_indices_list[i]
         bead_label = bead_label_list[i]
-        #xyz_i = map_coords(trj,atom_indices)
-        if mapping_function == 'coc' or mapping_function == 'center_of_charge':
-            map_coords(xyz_i,
-                       trj.xyz,
-                       atom_indices,
-                       charges_i[i],
-                       unitcell_lengths=trj.unitcell_lengths)
-        else:
-            map_coords(xyz_i,
-                       trj.xyz,
-                       atom_indices,
-                       masses_i[i],
-                       unitcell_lengths=trj.unitcell_lengths)
+        xyz_i = xyz[:,i,:]
 
-        xyz[:,i,:] = xyz_i
+        if mapping_function == 'coc' or mapping_function == 'center_of_charge':
+            weights = charges_i[i]
+        elif mapping_function == 'com' or mapping_function == 'center_of_mass':
+            weights = masses_i[i]
+        elif mapping_function == 'center':
+            weights = np.ones(len(atom_indices))
+
+        if (mod_weights_list is not None):
+            weights[:] = np.multiply(weights, mod_weights_list[i])
+
+        map_coords(xyz_i,
+                   trj.xyz,
+                   atom_indices,
+                   weights,
+                   unitcell_lengths=trj.unitcell_lengths)
 
         if "forces" in trj.__dict__ and len(trj.forces)>0:
             forces_i = map_forces(trj,atom_indices)

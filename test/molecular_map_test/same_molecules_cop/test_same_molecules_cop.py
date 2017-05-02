@@ -26,8 +26,8 @@ output_top_null_mass  = "dppc_nm.pdb"
 output_traj_native    = "dppc_native.trr"
 output_top_native     = "dppc_native.pdb"
 
-reference_traj = "dppc.trr"
-reference_top  = "dppc.pdb"
+reference_traj = "dppc_nm.trr"
+reference_top  = "dppc_nm.pdb"
 
 output_dir ='./output/'
 input_dir  ='./input/'
