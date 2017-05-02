@@ -120,6 +120,7 @@ def map_molecules(trj,selection_list,bead_label_list,transfer_labels=False,
             if len(internal_indices)==0:
                 raise ValueError("Error in map_molecules, selection string '%s'"
                                  "produced an empty list of atom indices"%sel)
+
             mol_indices.append(internal_indices)
 
 
@@ -181,7 +182,7 @@ def map_molecules(trj,selection_list,bead_label_list,transfer_labels=False,
 
     return(cg_trj)
 
-def gen_overlap_mod_weights(indices_list,assume_unique=True):
+def gen_unique_overlap_mod_weights(indices_list,assume_unique=True):
     """
     Parameters
     ----------
@@ -388,8 +389,8 @@ def cg_by_selection(trj, selection_string_list, *args, **kwargs):
     return cg_by_index(trj, atom_indices_list, *args, **kwargs )
 
 def cg_by_index(trj, atom_indices_list, bead_label_list, chain_list=None, segment_id_list=None,
-                resSeq_list=None, inplace=False, bonds=None,
-                split_shared_atoms=False, mapping_function="com", charge_tol=1e-5):
+                resSeq_list=None, inplace=False, bonds=None, split_shared_atoms=False, 
+                mod_weights_list=None, mapping_function="com", charge_tol=1e-5):
     """Create a coarse grained (CG) trajectory from subsets of atoms by
         computing centers of mass of selected sets of atoms.
     Parameters
@@ -437,6 +438,7 @@ def cg_by_index(trj, atom_indices_list, bead_label_list, chain_list=None, segmen
         if not (type(bead_label) is str) or len(bead_label)>4 or len(bead_label)<1:
             raise ValueError("Specified bead label '%s' is not valid, \
                              must be a string between 1 and 4 characters"%bead_label)
+
     bead_label_list = [ bead_label.upper() for bead_label in bead_label_list ]
 
     if mapping_function not in mapping_options:
@@ -468,6 +470,7 @@ def cg_by_index(trj, atom_indices_list, bead_label_list, chain_list=None, segmen
     forces = np.zeros((trj.xyz.shape[0],n_beads,trj.xyz.shape[2]),
                       dtype=np.double,
                       order='C')
+
     columns = ["serial","name","element","resSeq","resName","chainID"]
 
     #total masse for each cg bead.
@@ -517,14 +520,11 @@ def cg_by_index(trj, atom_indices_list, bead_label_list, chain_list=None, segmen
     element_label_dict = {}
 
     if (split_shared_atoms):
-        mod_weights_list = gen_overlap_mod_weights(atom_indices_list) 
-    else:
-        mod_weights_list = [ None for item in atom_indices_list ]
+        mod_weights_list = gen_unique_overlap_mod_weights(atom_indices_list) 
 
     for i in range(n_beads):
         atom_indices = atom_indices_list[i]
         bead_label = bead_label_list[i]
-        mod_weights = mod_weights_list[i]
         xyz_i = xyz[:,i,:]
 
         if mapping_function == 'coc' or mapping_function == 'center_of_charge':
@@ -534,8 +534,8 @@ def cg_by_index(trj, atom_indices_list, bead_label_list, chain_list=None, segmen
         elif mapping_function == 'center':
             weights = np.ones(len(atom_indices))
 
-        if (mod_weights is not None):
-            weights[:] = np.multiply(weights, mod_weights)
+        if (mod_weights_list is not None):
+            weights[:] = np.multiply(weights, mod_weights_list[i])
 
         map_coords(xyz_i,
                    trj.xyz,
