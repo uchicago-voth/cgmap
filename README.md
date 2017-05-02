@@ -3,7 +3,7 @@
 ![Build Status](https://travis-ci.org/uchicago-voth/cgmap.svg?branch=master)
 
 CGMap provides a tool to map fine-grained (FG) molecular dynamics trajectories
-to coarse-grained (CG) trajectories. The map between FG and CG trajectories are
+to coarse-grained (CG) trajectories. The map between FG and CG trajectories is
 constrained to be linear, with weights defined as either corresponding to
 center of points, center of mass, or center of charge.
 
