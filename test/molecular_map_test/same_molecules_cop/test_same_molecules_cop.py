@@ -55,24 +55,24 @@ label_lists = ['DPH','DPM','DPT']
 
 ############################### run native ###############################
 
-#### pull in trajectories
-#trj = md.load(input_dir + input_traj,top=input_dir + input_top)
-#
-##the types of each molecule in the trajectory.
-#molecule_types = [lipid_types.index(r.name) for r in trj.top.residues]
-#
-##preprocess trajectory content by adding new parts
-#for a in trj.top.atoms: a.charge = 0
-#
-##actual map command
-#cg_trj = cg.map_molecules(            trj = trj,
-#                           selection_list = [ name_lists  ], 
-#                          bead_label_list = [ label_lists ], 
-#                           molecule_types = molecule_types,
-#                         mapping_function = 'center')
-#
-#cg_trj.save(output_dir + output_traj_native) 
-#cg_trj[0].save(output_dir + output_top_native)
+### pull in trajectories
+trj = md.load(input_dir + input_traj,top=input_dir + input_top)
+
+#the types of each molecule in the trajectory.
+molecule_types = [lipid_types.index(r.name) for r in trj.top.residues]
+
+#preprocess trajectory content by adding new parts
+for a in trj.top.atoms: a.charge = 0
+
+#actual map command
+cg_trj = cg.map_molecules(            trj = trj,
+                           selection_list = [ name_lists  ], 
+                          bead_label_list = [ label_lists ], 
+                           molecule_types = molecule_types,
+                         mapping_function = 'center')
+
+cg_trj.save(output_dir + output_traj_native) 
+cg_trj[0].save(output_dir + output_top_native)
 
 ############################### run null mass ############################
 
@@ -101,14 +101,13 @@ cg_trj[0].save(output_dir + output_top_null_mass)
 cg_traj_null_mass = cg_trj.load(output_dir + output_traj_null_mass,
                                 top=output_dir + output_top_null_mass) 
 
-#cg_traj_native = cg_trj.load(output_dir + output_traj_native,
-#                             top=output_dir + output_top_native) 
+cg_traj_native = cg_trj.load(output_dir + output_traj_native,
+                             top=output_dir + output_top_native) 
 
 ref_cg_traj = cg_trj.load(reference_dir + reference_traj,
                           top=reference_dir + reference_top) 
 
 result_null   = check.md_content_equality(cg_traj_null_mass,ref_cg_traj)
-#result_native = check.md_content_equality(cg_traj_null_mass,ref_cg_traj)
+result_native = check.md_content_equality(cg_traj_null_mass,ref_cg_traj)
 
-#sys.exit(check.check_result_to_exitval(result_null & result_native))
-sys.exit(check.check_result_to_exitval(result_null))
+sys.exit(check.check_result_to_exitval(result_null & result_native))
