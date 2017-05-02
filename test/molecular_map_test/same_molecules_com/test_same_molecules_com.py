@@ -18,6 +18,9 @@ input_maps = ["mapping_bead_1_dppc",
 output_traj = "dppc.trr"
 output_top  = "dppc.pdb"
 
+output_id_traj = "dppc_id.trr"
+output_id_top  = "dppc_id.pdb"
+
 reference_traj = "dppc.trr"
 reference_top  = "dppc.pdb"
 
@@ -62,12 +65,26 @@ cg_trj = cg.map_molecules(            trj = trj,
 cg_trj.save(output_dir + output_traj) 
 cg_trj[0].save(output_dir + output_top)
 
+#actual map command
+cg_id_trj = cg.map_identical_molecules(  trj = trj,
+                              selection_list = name_lists, 
+                             bead_label_list = label_lists)
+
+cg_id_trj.save(output_dir + output_id_traj) 
+cg_id_trj[0].save(output_dir + output_id_top)
+
 ############################### check results ###############################
 # reloading results from disk.
 
 cg_traj = cg_trj.load(output_dir + output_traj,top=output_dir + output_top) 
+cg_id_traj = cg_trj.load(output_dir + output_id_traj,top=output_dir + output_id_top) 
+
 ref_cg_traj = cg_trj.load(reference_dir + reference_traj,
                           top=reference_dir + reference_top) 
 
 result=check.md_content_equality(cg_traj,ref_cg_traj)
-sys.exit(check.check_result_to_exitval(result))
+
+result_general = check.md_content_equality(cg_traj,ref_cg_traj)
+result_id      = check.md_content_equality(cg_id_traj,ref_cg_traj)
+
+sys.exit(check.check_result_to_exitval(result_general & result_id))

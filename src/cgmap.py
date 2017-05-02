@@ -225,93 +225,47 @@ def gen_unique_overlap_mod_weights(indices_list,assume_unique=True):
     #we invert the weights before we return them.
     return([ np.divide(1.0,item) for item in inverse_weights])
 
-def map_identical_molecules(trj,selection_list,bead_label_list,
-                            transfer_labels=False,*args,**kwargs):
+def map_identical_molecules(trj,selection_list,bead_label_list,transfer_labels=False,
+                            return_call=False,*args,**kwargs):
     """This performs the mapping assuming the entire system
-    is a set of identical molecules.
+    is a set of identical molecules. The argument are almost identical to map
+    molecules, but do not have to be nested in lists.
 
     Parameters
     ----------
-    trj :
+    traj : Trajectory
         Trajectory to sum forces on
     selection_list :
-        Indexible collection of strings
+        Collection of strings
     bead_label_list :
-        Indexible collection
+        Collection of strings
     transfer_labels :
         Whether to transfer over labels in @trj. Moves over resSeq, resName
         for every bead, assuming that the atoms in each bead are uniform in
         those qualities.
+    return_call: boolean
+        Whether to return the arguments that cg_by_index would be called with
+        instead of actually calling it. Useful for modifying the call.
 
     Returns
     -------
     traj: trajectory
         trajectory formed by applying given molecular map.
+    -OR-
+    tuple: list of arguments which would be passed to cg_by_index
     """
 
-    index_list = []
-    resSeq_list = []
-    label_list = []
+    null_molecule_types = list(np.zeros(trj.top.n_residues,dtype=np.int32))
 
-    internal_indices_list = []
+    out = map_molecules(            trj = trj,
+                          selection_list = [selection_list],
+                         bead_label_list = [bead_label_list],
+                         transfer_labels = transfer_labels,
+                          molecule_types = null_molecule_types,
+                     molecule_type_order = False,
+                             return_call = return_call)
 
-    if len(selection_list) != len(bead_label_list):
-        raise ValueError("Error in map_identical_molecules, must submit "
-                         "selection list and bead label list of same length")
-
-    for sel in selection_list:
-        internal_indices = trj.top.select("(resSeq == 1) and (%s)"%sel)
-        if len(internal_indices)==0:
-            raise ValueError("Error in map_identical_molecules, selection "
-                             "string '%s' produced an empty list of "
-                             "atom indices"%sel)
-        internal_indices_list.append(internal_indices)
-
-    start_index = 0
-    resSeq = 1
-    for r in trj.top.residues:
-        for bead_idx, internal_indices in enumerate(internal_indices_list):
-            system_indices = internal_indices + start_index
-            index_list.append(system_indices)
-            resSeq_list.append(resSeq)
-            label_list.append(bead_label_list[bead_idx])
-        resSeq = resSeq+1
-        start_index = start_index + r.n_atoms
-
-    cg_trj = cg_by_index(trj, index_list, label_list, *args, **kwargs)
-
-    if (transfer_labels is True):
-
-        df_aa_top = trj.top.to_dataframe()[0]
-        df_cg_top = cg_trj.top.to_dataframe()[0]
-
-        #get resSeq info.
-        aa_resSeq = df_aa_top.ix[:,'resSeq']
-
-        #find atom indices for first atoms of each residue.
-        res_starting_indices = \
-            np.sort(np.unique(aa_resSeq,return_index=True)[1])
-
-        #get resids and resnames for startings atoms.
-        aa_starting_resids    = df_aa_top.ix[res_starting_indices,'resSeq']
-        aa_starting_resnames  = df_aa_top.ix[res_starting_indices,'resName']
-
-        #needed for duplicating atomistic info across cg molecules
-        n_sites_per_cg = [[ len(bead_label_list) ]]
-        molecule_types = np.repeat(0,len(aa_starting_resids))
-
-        #generate and place resids
-        cg_resids = typed_elementwise_rep(aa_starting_resids,molecule_types,n_sites_per_cg)
-        df_cg_top.ix[:,"resSeq"] = cg_resids
-
-        #generate and place resNames
-        cg_resnames = typed_elementwise_rep(aa_starting_resnames,molecule_types,n_sites_per_cg)
-        df_cg_top.ix[:,"resName"] = cg_resnames
-
-        #convert and put back.
-        cg_trj.top = Topology.from_dataframe(df_cg_top)
-
-    return(cg_trj)
+    return(out)
 
 def compute_center_weighted(xyz_i,xyz_all,atom_indices,weights=None,unitcell_lengths=None):
     """Compute the weighted center over selected atoms for a coordinate matrix.
