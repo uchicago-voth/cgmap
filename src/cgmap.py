@@ -33,7 +33,8 @@ def map_forces(traj,atom_indices=None,use_pbc=True):
     return mapped_forces
 
 def map_molecules(trj,selection_list,bead_label_list,transfer_labels=False,
-                  molecule_types=None, molecule_type_order=False,*args,**kwargs):
+                  molecule_types=None, molecule_type_order=False,
+                  return_call=False,*args,**kwargs):
     """ This performs the mapping where each molecule has been assigned a
     type.
 
@@ -54,11 +55,16 @@ def map_molecules(trj,selection_list,bead_label_list,transfer_labels=False,
     molecule_type_order : boolean
         Specifying molecule_type_order means that the map will be
         reordered so that all molecules of type 0 come first, then 1, etc.
+    return_call: boolean
+        Whether to return the arguments that cg_by_index would be called with
+        instead of actually calling it. Useful for modifying the call.
 
     Returns
     -------
     traj: trajectory
         trajectory formed by applying given molecular map.
+    -OR-
+    tuple: list of arguments which would be passed to cg_by_index
     """
 
     ### First, deal with optional arguments and argument validation.
@@ -146,6 +152,13 @@ def map_molecules(trj,selection_list,bead_label_list,transfer_labels=False,
             label_list.append(bead_label_list[molecule_type][bead_idx])
         resSeq = resSeq+1
         start_index = start_index + r.n_atoms
+
+    if (return_call is True):
+        arg_list=[trj, index_list, label_list]
+        arg_list.extend(args)
+        arg_list.append(kwargs)
+        return(arg_list)
+        #exit early.
 
     cg_trj = cg_by_index(trj, index_list, label_list, *args, **kwargs)
 
