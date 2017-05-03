@@ -1,13 +1,28 @@
 #!/usr/bin/env bash
 
-#get the top directory of the project.
+# This is the entire framework for unit testing.
+# Each directory in the test directory is entered,
+# and a local command called 'test' is run. Results 
+# are formatted and the return status is calculated.
+
+#get the top directory of the project. Allows script
+#to be called from anywhere.
 git_root=$(git rev-parse --show-toplevel)
 
+#formats output of command for wrapping and prefix.
+function test_format {
+	fold_length=80
+	prefix='$0="       ++> "$0'
+	$1 | fold -w $fold_length |awk "$prefix"
+	return ${PIPESTATUS[0]}
+}
+
+#runs a regression test.
 function run_reg_test {
 	echo "Running: "$1
 	start_dir=$(pwd)
 	cd $1 || return 255
-	./test
+	test_format ./test
 	result=$?
 	if [[ $result != 0 ]]; then
 		echo "Regression test failed:"
