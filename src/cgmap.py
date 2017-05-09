@@ -9,6 +9,23 @@ from top_manip import typed_elementwise_rep
 
 mapping_options = {}
 
+def mode_rows(a):
+    """Efficiently returns the most common row of a 2-D array."""
+    #It is unclear how this method truly works.
+
+    #generates a numpy view
+    a = np.ascontiguousarray(a)
+
+    #Modifies the basic data type of that view to be complete rows?
+    void_dt = np.dtype((np.void, a.dtype.itemsize * np.prod(a.shape[1:])))
+
+    #Counts the occurance of rows
+    _,ids, count = np.unique(a.view(void_dt).ravel(), \
+                                return_index=1,return_counts=1)
+    largest_count_id = ids[count.argmax()]
+    most_frequent_row = a[largest_count_id]
+    return most_frequent_row
+
 def map_forces(traj,atom_indices=None,use_pbc=True):
     """Compute the center of mass for each frame.
     Parameters
@@ -269,7 +286,8 @@ def map_identical_molecules(trj,selection_list,bead_label_list,transfer_labels=F
 
     return(out)
 
-def compute_center_weighted(xyz_i,xyz_all,atom_indices,weights=None,unitcell_lengths=None):
+def compute_center_weighted(xyz_i,xyz_all,atom_indices,weights=None,
+                            unitcell_lengths=None,center_postwrap=False):
     """Compute the weighted center over selected atoms for a coordinate matrix.
 
     Parameters
@@ -284,6 +302,10 @@ def compute_center_weighted(xyz_i,xyz_all,atom_indices,weights=None,unitcell_len
             Weights used to calculate positions (normalized in function)
     unitcell_lengths: array-like, dtype=float, shape=(n_dim)
             Unitcell lengths; Positions are calculated in a minimum image.
+    center_postwrap: boolean
+            Whether to wrap the derived CG coordinates around the given box
+            after mapping. Assumes the box is centered at L/2, where L is a
+            given periodic dimension.
 
     Returns
     -------
@@ -297,15 +319,42 @@ def compute_center_weighted(xyz_i,xyz_all,atom_indices,weights=None,unitcell_len
 
     weights /= weights.sum()
 
-    for i, x in enumerate(xyz):
-    # use periodic boundaries by centering relative to first
-    # xyz coordinate, then shift back
-        if unitcell_lengths is not None:
+    if unitcell_lengths is not None and center_postwrap is False:
+        #performs a consensus shift on the resulting cg mapped site.
+        for i, x in enumerate(xyz):
+            # use periodic boundaries by centering relative to first
+            # xyz coordinate, then shift back
             xyz0 = x[0,:]
             shift = unitcell_lengths[i]*np.floor( \
                     (x - xyz0)/unitcell_lengths[i] + 0.5)
+
             x = x - shift
-        xyz_i[i] = x.astype('float64').T.dot(weights).flatten()
+
+            mode_shift = mode_rows(shift)
+
+            mapped_points = x.astype('float64').T.dot(weights).flatten()
+
+            xyz_i[i] = mapped_points + mode_shift
+    elif unitcell_lengths is not None and center_postwrap is True:
+        #performs post map wrapping around box center.
+        for i, x in enumerate(xyz):
+            # use periodic boundaries by centering relative to first
+            # xyz coordinate, then shift back
+            xyz0 = x[0,:]
+            shift = unitcell_lengths[i]*np.floor( \
+                    (x - xyz0)/unitcell_lengths[i] + 0.5)
+
+            x = x - shift
+
+            mapped_points = x.astype('float64').T.dot(weights).flatten()
+
+            shift = unitcell_lengths[i]*np.floor( \
+                    (mapped_points - unitcell_lengths[i]/2)/unitcell_lengths[i] + 0.5)
+
+            xyz_i[i] = mapped_points - shift
+    else:
+        for i, x in enumerate(xyz):
+            xyz_i[i] = x.astype('float64').T.dot(weights).flatten()
 
     return None
 
@@ -359,7 +408,8 @@ def cg_by_selection(trj, selection_string_list, *args, **kwargs):
 
 def cg_by_index(trj, atom_indices_list, bead_label_list, chain_list=None, segment_id_list=None,
                 resSeq_list=None, inplace=False, bonds=None, split_shared_atoms=False, 
-                mod_weights_list=None, mapping_function="com", charge_tol=1e-5):
+                mod_weights_list=None, mapping_function="com", charge_tol=1e-5,
+                center_postwrap=False):
     """Create a coarse grained (CG) trajectory from subsets of atoms by
         computing centers of mass of selected sets of atoms.
     Parameters
@@ -388,6 +438,9 @@ def cg_by_index(trj, atom_indices_list, bead_label_list, chain_list=None, segmen
         so, equally divide their weight accordingly for each bead.
     mapping_function: string, default='com': how to map xyz coordinates
         options: %s
+    center_postwrap: Boolean
+        Whether to wrap the CG system after it is mapped. Assumes that box is
+        centered at 0, and only has effect if periodic information is present.
 
     Note - If repeated resSeq values are used, as for a repeated motiff
         in a CG polymer, those sections most be broken into separate
@@ -413,8 +466,6 @@ def cg_by_index(trj, atom_indices_list, bead_label_list, chain_list=None, segmen
     if mapping_function not in mapping_options:
         raise ValueError("Must select a mapping function from: %s"\
                          %mapping_options.keys())
-
-    map_coords = mapping_options[mapping_function]
 
     if chain_list is None:
         chain_list = np.ones(len(atom_indices_list),dtype=int)
@@ -506,11 +557,12 @@ def cg_by_index(trj, atom_indices_list, bead_label_list, chain_list=None, segmen
         if (mod_weights_list is not None):
             weights[:] = np.multiply(weights, mod_weights_list[i])
 
-        map_coords(xyz_i,
-                   trj.xyz,
-                   atom_indices,
-                   weights,
-                   unitcell_lengths=trj.unitcell_lengths)
+        compute_center_weighted(xyz_i,
+                                trj.xyz,
+                                atom_indices,
+                                weights,
+                                unitcell_lengths=trj.unitcell_lengths,
+                                center_postwrap=center_postwrap)
 
         if "forces" in trj.__dict__ and len(trj.forces)>0:
             forces_i = map_forces(trj,atom_indices)
