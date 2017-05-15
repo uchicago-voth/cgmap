@@ -14,10 +14,10 @@ input_top  = "acetonitrile.pdb"
 mapping_indices = ["index 0 or index 5",
                          "index 1 to 4"]
 
-output_traj = "acetonitrile.lammpstrj"
+output_traj = "acetonitrile.trr"
 output_top  = "acetonitrile.pdb"
 
-reference_traj = "acetonitrile.lammpstrj"
+reference_traj = "acetonitrile.trr"
 reference_top  = "acetonitrile.pdb"
 
 output_dir ='./output/'
