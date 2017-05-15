@@ -186,26 +186,26 @@ def map_molecules(trj,selection_list,bead_label_list,transfer_labels=False,
         df_cg_top = cg_trj.top.to_dataframe()[0]
 
         #get resSeq info.
-        aa_resSeq = df_aa_top.ix[:,'resSeq']
+        aa_resSeq = df_aa_top.loc[:,'resSeq']
 
         #find atom indices for first atoms of each residue.
         res_starting_indices = \
             np.sort(np.unique(aa_resSeq,return_index=True)[1])
 
         #get resids and resnames for startings atoms.
-        aa_starting_resids    = df_aa_top.ix[res_starting_indices,'resSeq']
-        aa_starting_resnames  = df_aa_top.ix[res_starting_indices,'resName']
+        aa_starting_resids    = df_aa_top.loc[res_starting_indices,'resSeq']
+        aa_starting_resnames  = df_aa_top.loc[res_starting_indices,'resName']
 
         #needed for duplicating atomistic info across cg molecules
         n_sites_per_cg = [ len(desc) for desc in bead_label_list ]
 
         #generate and place resids
         cg_resids = typed_elementwise_rep(aa_starting_resids,molecule_types,n_sites_per_cg)
-        df_cg_top.ix[:,"resSeq"] = cg_resids
+        df_cg_top.loc[:,"resSeq"] = cg_resids
 
         #generate and place resNames
         cg_resnames = typed_elementwise_rep(aa_starting_resnames,molecule_types,n_sites_per_cg)
-        df_cg_top.ix[:,"resName"] = cg_resnames
+        df_cg_top.loc[:,"resName"] = cg_resnames
 
         #convert and put back.
         cg_trj.top = Topology.from_dataframe(df_cg_top)
