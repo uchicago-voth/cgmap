@@ -543,15 +543,17 @@ def cg_by_index(trj, atom_indices_list, bead_label_list, chain_list=None, segmen
         mod_weights_list = gen_unique_overlap_mod_weights(atom_indices_list) 
 
     has_forces = False
-    if 'forces' in trj.__dict__:
-        try: 
-            test_forces = map_forces(trj, 0)
-    	    has_forces = True
-        except TypeError:
-            print("WARNING: Invalid Forces\nNo Map applied to forces")
-        except:
-            print("Unknown error, check your forces\nexiting...")
-            raise
+    try:
+        trj.__dict__['forces']
+        test_forces = map_forces(trj, (0,))
+        has_forces = True
+    except TypeError:
+        print("WARNING: Invalid Forces\nNo Map applied to forces")
+    except KeyError:
+        pass
+    except:
+        print("Unknown error, check your forces\nexiting...")
+        raise
 
     for i in range(n_beads):
         atom_indices = atom_indices_list[i]
