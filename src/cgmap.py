@@ -49,6 +49,31 @@ def map_forces(traj,atom_indices=None,use_pbc=True):
 
     return mapped_forces
 
+def get_forcenorms(traj,atom_indices=None,use_pbc=True):
+    """Compute a list of time-averaged (over all frames) norms of forces for all atoms in a CG site
+    Parameters
+    ----------
+    traj : Trajectory
+        Trajectory to sum forces over
+    atom_indices : array-like, dtype=int, shape=(n_atoms)
+        List of indices for atoms in this CG site
+    Returns
+    -------
+    forces : np.ndarray, shape=(n_atoms)
+        Time-averaged norm of forces for each atom 
+    """
+
+    if atom_indices is not None and len(atom_indices) > 0 :
+        forces = traj.forces[:,atom_indices,:]
+    else:
+        forces = traj.forces
+
+    mean_forces = forces.astype('float64').mean(axis=0)
+    mean_forcenorms = np.square(mean_forces.astype('float64')).sum(axis=1).flatten()
+
+    return mean_forcenorms
+
+
 def map_molecules(trj,selection_list,bead_label_list,transfer_labels=False,
                   molecule_types=None, molecule_type_order=False,
                   return_call=False,*args,**kwargs):
@@ -363,6 +388,8 @@ mapping_options['com'] = compute_center_weighted
 mapping_options['center_of_mass'] = compute_center_weighted
 mapping_options['coc'] = compute_center_weighted
 mapping_options['center_of_charge'] = compute_center_weighted
+mapping_options['cof'] = compute_center_weighted
+mapping_options['center_of_force'] = compute_center_weighted
 
 def cg_by_selection(trj, selection_string_list, *args, **kwargs):
     """Create a coarse grained (CG) trajectory from list of
@@ -530,7 +557,13 @@ def cg_by_index(trj, atom_indices_list, bead_label_list, chain_list=None, segmen
 
             charges_i.append(temp_charges)
             charges[ii] = charges_i[ii].sum()
-        
+    
+    forcenorm_i = []
+    if mapping_function == 'cof' or mapping_function == 'center_of_force' :
+        for ii in range(n_beads) :
+            atom_indices = atom_indices_list[ii]
+            forcenorm_i.append(get_forcenorm(trj,atom_indices))
+
     if mapping_function == 'coc' or mapping_function == 'center_of_charge':
         for charge in charges:
             if np.absolute(charge) < charge_tol:
@@ -564,6 +597,8 @@ def cg_by_index(trj, atom_indices_list, bead_label_list, chain_list=None, segmen
             weights = charges_i[i]
         elif mapping_function == 'com' or mapping_function == 'center_of_mass':
             weights = masses_i[i]
+        elif mapping_function == 'cof' or mapping_function == 'center_of_force':
+            weights = forcenorm_i[i]
         elif mapping_function == 'center':
             weights = np.ones(len(atom_indices))
 
