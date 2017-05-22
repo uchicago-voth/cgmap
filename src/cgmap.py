@@ -562,7 +562,7 @@ def cg_by_index(trj, atom_indices_list, bead_label_list, chain_list=None, segmen
     if mapping_function == 'cof' or mapping_function == 'center_of_force' :
         for ii in range(n_beads) :
             atom_indices = atom_indices_list[ii]
-            forcenorm_i.append(get_forcenorm(trj,atom_indices))
+            forcenorm_i.append(get_forcenorms(trj,atom_indices))
 
     if mapping_function == 'coc' or mapping_function == 'center_of_charge':
         for charge in charges:
