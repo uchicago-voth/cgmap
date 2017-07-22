@@ -5,39 +5,73 @@
 # and a local command called 'test' is run. Results 
 # are formatted and the return status is calculated.
 
+# Much of the complexity here is to guard against corner 
+# cases.
+
 #get the top directory of the project. Allows script
-#to be called from anywhere.
-git_root=$(git rev-parse --show-toplevel)
+#to be called from and be placed anywhere in the project.
+dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+test_root="${dir}/molecular_map_test/"
+
+if [[ ! -d "$test_root" ]]; then
+	printf "Determined root test directory is invalid; "
+	printf "No tests run. Aborting.\n"
+	exit 255
+fi
+
+#function which enumerates tests to run (null separated).
+#Modify as structure of tests grows.
+function get_test_dirs {
+	find "$1" -maxdepth 1 -type d ! -path "$1" -print0
+}
 
 #formats output of command for wrapping and prefix.
 function test_format {
 	fold_length=80
 	prefix='$0="       ++> "$0'
-	$1 | fold -w $fold_length |awk "$prefix"
+	"$1" | fold -w $fold_length |awk "$prefix"
 	return ${PIPESTATUS[0]}
 }
 
-#runs a regression test.
+#runs a regression test. Fails gracefully.
 function run_reg_test {
-	echo "Running: "$1
-	start_dir=$(pwd)
-	cd $1 || return 255
-	test_format ./test
-	result=$?
-	if [[ $result != 0 ]]; then
-		echo "Regression test failed:"
-		echo "    ${1}"
+	#trims current directory listing.
+	printf -- "Running: ${1##*/}\n"
+	start_dir="$(pwd)"
+	cd -- "$1"
+
+	if [[ $? != 0 ]]; then
+		printf -- "ERROR: Given test directory is invalid:\n    ${1}\n"
+		exit 255
 	fi
-	cd $start_dir
+
+	if [[ -x 'test' ]]; then
+		test_format ./test
+		result=$?
+	else
+		printf -- "ERROR: Given specific test command is invalid:\n    ${1}\n"
+		exit 255
+	fi
+
+	[[ $result == 0 ]] || printf -- "ERROR: Regression test failed:\n    ${1}\n"
+	cd "$start_dir"
 	return $result
 }
 
-global_result=0
+printf "Planning to run the following tests:\n"
 
-for test_dir in $git_root/test/molecular_map_test/*; do
-	run_reg_test $test_dir
-	status_val=$?
-	global_result=$((global_result + status_val))
-done
+#tries to list relative to git project root directory. 
+git_root="$(cd $dir; git rev-parse --show-toplevel 2>/dev/null)"
+p_root=${git_root:-"^$"}
+get_test_dirs $test_root | tr '\000' '\n'| sed "s#.*${p_root}\(.*\)#<project>\1#"
+printf "\n"
+
+#Robust way to get the list of test directories. The current case is
+#placed in $test_dir.
+global_result=0
+while IFS= read -r -d '' test_dir; do
+	run_reg_test "$test_dir"
+	global_result=$((global_result + $?))
+done < <(get_test_dirs $test_root)
 
 exit $global_result
