@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# This is the entire framework for unit testing.
+# This is the entire framework for regression testing.
 # Each directory in the test directory is entered,
 # and a local command called 'test' is run. Results 
 # are formatted and the return status is calculated.
