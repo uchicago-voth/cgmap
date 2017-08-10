@@ -143,7 +143,6 @@ def map_molecules(trj,selection_list,bead_label_list,transfer_labels=False,
     first_molecules = [molecule_types.index(i) for i in range(n_molecule_types)]
 
     internal_indices_list = [[] for i in range(n_molecule_types)]
-
     iterable = zip(selection_list,first_molecules,internal_indices_list)
     for selection,first_mol,mol_indices in iterable:
         first_index = trj.top.select("(resid == %i)"%(first_mol)).min()
@@ -151,7 +150,7 @@ def map_molecules(trj,selection_list,bead_label_list,transfer_labels=False,
         for sel in selection:
             has_index = sel.find("index")> -1
             has_name  = sel.find("name") > -1
-
+            internal_indices = []
             if has_index and has_name:
                 raise ValueError("Error in map molecules, do not specify "
                                  "selection by index and by type.")
