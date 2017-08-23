@@ -73,6 +73,73 @@ def get_forcenorms(traj,atom_indices=None,use_pbc=True):
 
     return mean_forcenorms
 
+def map_unfiltered_molecules(trj,selection_list,bead_label_list,transfer_labels=False,
+                  molecule_types=None, molecule_type_order=False,
+                  return_call=False,*args,**kwargs):
+    """ This performs the mapping where each molecule and its beads has been assigned 
+    in the parent script. This method is used when the original residue-based logic 
+    for molecule assignment does not hold (e.g., proteins).
+
+    Parameters
+    ----------
+    traj : Trajectory
+        Trajectory to sum forces on
+    selection_list :
+        Indexible collection of strings
+    bead_label_list :
+        Indexible collection
+    transfer_labels :
+        Whether to transfer over labels in @trj. Moves over resSeq, resName
+        for every bead, assuming that the atoms in each bead are uniform in
+        those qualities.
+    molecule_types :
+        Indexible collection of integers
+    molecule_type_order : boolean
+        Specifying molecule_type_order means that the map will be
+        reordered so that all molecules of type 0 come first, then 1, etc.
+    return_call: boolean
+        Whether to return the arguments that cg_by_index would be called with
+        instead of actually calling it. Useful for modifying the call.
+
+    Returns
+    -------
+    traj: trajectory
+        trajectory formed by applying given molecular map.
+    -OR-
+    tuple: list of arguments which would be passed to cg_by_index
+    """
+
+    # The current features do not use molecule_type_order
+
+    n_molecule_types = len(selection_list)
+
+    if sorted(set(molecule_types)) != range(n_molecule_types):
+        raise ValueError("Error in map molecules, molecule types list must "
+                         "contain only and all numbers from 0 to "
+                         "n_molecule_types-1.")
+
+    if len(selection_list) != len(bead_label_list):
+        raise ValueError("Error in map molecules, must submit selection list "
+                         "and bead label list of same length.")
+
+    for i in range(n_molecule_types):
+        if len(selection_list[i]) != len(bead_label_list[i]):
+            raise ValueError("Error in map molecules, selection list %i and "
+                             "bead label list %i must be of same length."%(i,i))
+
+    index_list = []
+    label_list = []
+    for mid in range(len(selection_list)):
+        selMol = selection_list[mid]
+        for bid in range(len(selMol)) :
+            internal_indices = trj.top.select("%s"%(selMol[bid]))
+            index_list.append(internal_indices)
+            label_list.append(bead_label_list[mid][bid])
+
+    cg_trj = cg_by_index(trj, index_list, label_list, *args, **kwargs)
+
+    return(cg_trj)
+
 
 def map_molecules(trj,selection_list,bead_label_list,transfer_labels=False,
                   molecule_types=None, molecule_type_order=False,
@@ -124,9 +191,9 @@ def map_molecules(trj,selection_list,bead_label_list,transfer_labels=False,
                          "contain only and all numbers from 0 to "
                          "n_molecule_types-1.")
 
-    if len(molecule_types) != trj.top.n_residues:
-        raise ValueError("Error in map molecules, molecule types list must "
-                         "have the same length as number of residues.")
+#    if len(molecule_types) != trj.top.n_residues:
+#        raise ValueError("Error in map molecules, molecule types list must "
+#                         "have the same length as number of residues.")
 
     if len(selection_list) != len(bead_label_list):
         raise ValueError("Error in map molecules, must submit selection list "
@@ -523,7 +590,6 @@ def cg_by_index(trj, atom_indices_list, bead_label_list, chain_list=None, segmen
     masses = np.zeros((n_beads),dtype=np.float64)
     #list of masses for elements in cg bead.
     masses_i = []
-
     #masses
     for ii in range(n_beads):
         #atoms in curent cg bead.
