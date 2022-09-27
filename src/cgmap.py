@@ -186,7 +186,7 @@ def map_molecules(trj,selection_list,bead_label_list,transfer_labels=False,
 
     n_molecule_types = len(selection_list)
 
-    if sorted(set(molecule_types)) != range(n_molecule_types):
+    if sorted(set(molecule_types)) != list(range(n_molecule_types)):
         raise ValueError("Error in map molecules, molecule types list must "
                          "contain only and all numbers from 0 to "
                          "n_molecule_types-1.")
